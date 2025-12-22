@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>排球大清算 6.0</title>
+    <title>排球大清算 6.1 修復版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -18,7 +18,6 @@
             -webkit-tap-highlight-color: transparent; 
             background: #020617;
             color: #f8fafc;
-            overflow-x: hidden;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .glass-dark { 
@@ -31,7 +30,7 @@
         .gold-text { color: #fbbf24; }
         .card-dark { background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.03); }
         @keyframes bounceIn { 0% { transform: scale(0.9); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
-        .animate-pop { animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-pop { animation: bounceIn 0.4s forwards; }
     </style>
 </head>
 <body>
@@ -52,7 +51,7 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const APP_ID = 'vball_v5_pro'; // 延續 V5 數據
+        const APP_ID = 'vball_v5_pro'; 
 
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
@@ -83,9 +82,13 @@
             const [baseRate, setBaseRate] = useState(10);
             const [winners, setWinners] = useState([]);
             const [losers, setLosers] = useState([]);
+            
+            // 名單管理 State
             const [newName, setNewName] = useState('');
+            const [photo, setPhoto] = useState(null);
             const [editingUser, setEditingUser] = useState(null);
             
+            const fileRef = useRef(null);
             const editFileRef = useRef(null);
 
             useEffect(() => {
@@ -145,7 +148,7 @@
                     const img = new Image();
                     img.onload = () => {
                         const cvs = document.createElement('canvas');
-                        const max = 200; const s = max / img.width;
+                        const max = 240; const s = max / img.width;
                         cvs.width = max; cvs.height = img.height * s;
                         cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
                         res(cvs.toDataURL('image/jpeg', 0.6));
@@ -155,20 +158,41 @@
                 r.readAsDataURL(file);
             });
 
+            // 新增受害者邏輯
+            const handleAddUser = async () => {
+                if (!newName.trim()) return alert("唔入名，我點知邊個係受害者？");
+                try {
+                    await db.collection('artifacts').doc(APP_ID).collection('users').add({
+                        name: newName.trim(),
+                        photo: photo,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    setNewName(''); setPhoto(null);
+                } catch(e) { alert("入名失敗：" + e.message); }
+            };
+
+            const handleSubmitGame = async () => {
+                if (!winners.length || !losers.length) return alert("揀人呀大佬！");
+                await db.collection('artifacts').doc(APP_ID).collection('matches').add({
+                    baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                setWinners([]); setLosers([]); setActiveTab('daily');
+            };
+
             if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-amber-500">
                 <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <div className="font-black text-sm tracking-widest uppercase">場地大清算中...</div>
+                <div className="font-black text-sm tracking-widest uppercase italic">場地大清算中...</div>
             </div>;
 
             return (
                 <div className="max-w-md mx-auto min-h-screen pb-44 relative">
                     
-                    {/* 頂部 Header */}
+                    {/* Header */}
                     <header className="bg-slate-950 text-white p-7 rounded-b-[3.5rem] shadow-2xl border-b border-white/5 sticky top-0 z-40">
                         <div className="flex justify-between items-center mb-8 px-2">
                             <div>
                                 <h1 className="text-2xl font-black gold-text tracking-tighter italic">排球大清算</h1>
-                                <p className="text-slate-500 text-[9px] font-black tracking-[0.2em] uppercase">OFFICE SETTLEMENT V6.0</p>
+                                <p className="text-slate-500 text-[9px] font-black tracking-[0.2em] uppercase">SETTLEMENT V6.1 FIX</p>
                             </div>
                             <button onClick={() => setActiveTab('profiles')} className="bg-slate-900 p-3 rounded-2xl border border-white/5 shadow-lg active:scale-90 transition-transform">
                                 <Icon name="users" size={20} className="gold-text" />
@@ -193,23 +217,23 @@
                     </header>
 
                     <main className="px-7 py-8">
-                        {/* 1. 今日老細表 */}
+                        {/* 1. 清算 (今日) */}
                         {activeTab === 'daily' && (
                             <div className="space-y-8 animate-pop">
                                 <div className="flex justify-between items-center px-2">
-                                    <h2 className="text-xl font-black gold-text">今日邊個係老細？</h2>
-                                    <div className="bg-slate-900 text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-black border border-slate-800">{selectedDate}</div>
+                                    <h2 className="text-xl font-black gold-text">今日清算列表</h2>
+                                    <div className="bg-slate-900 text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-black border border-slate-800 tracking-wider">{selectedDate}</div>
                                 </div>
                                 
                                 {dailyData.summary.length > 0 ? (
                                     <div className="card-dark rounded-[2.5rem] p-7 shadow-2xl">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase mb-5 tracking-widest text-center">今日淨身家 (對數收錢位)</p>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase mb-5 tracking-widest text-center italic">今日淨身家 (收錢位)</p>
                                         <div className="space-y-6">
                                             {dailyData.summary.map(p => (
                                                 <div key={p.id} className="flex justify-between items-center">
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
-                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><Icon name="users" size={20} /></div>}
+                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="users" size={20} /></div>}
                                                         </div>
                                                         <span className="font-black text-slate-200">{p.name}</span>
                                                     </div>
@@ -221,42 +245,42 @@
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center py-24 text-slate-800 font-black border-2 border-dashed border-slate-900 rounded-[3rem] uppercase tracking-tighter">今日暫時無人輸錢 😴</div>
+                                    <div className="text-center py-24 text-slate-800 font-black border-2 border-dashed border-slate-900 rounded-[3rem] uppercase tracking-tighter">無人輸錢喎 😴</div>
                                 )}
 
                                 <div className="space-y-4">
-                                    <h3 className="text-[10px] font-black text-slate-600 px-3 uppercase tracking-widest">打波詳細記錄</h3>
+                                    <h3 className="text-[10px] font-black text-slate-600 px-3 uppercase tracking-widest">當日詳細記錄</h3>
                                     {dailyData.list.map((m, idx) => (
                                         <div key={m.id} className="card-dark p-6 rounded-[2rem] flex justify-between items-center shadow-sm relative overflow-hidden">
-                                            <div className="space-y-3">
+                                            <div className="space-y-3 text-left">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] font-black bg-white/5 text-amber-500 px-3 py-1 rounded-full italic">第 {dailyData.list.length - idx} 局</span>
-                                                    <span className="text-[10px] font-bold text-slate-600">${m.baseRate} 場</span>
+                                                    <span className="text-[10px] font-bold text-slate-700">${m.baseRate} 場</span>
                                                 </div>
                                                 <div className="flex flex-col gap-1.5">
                                                     <div className="text-xs font-bold"><span className="text-green-500 mr-2">收錢大佬:</span> {m.winners.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
                                                     <div className="text-xs font-bold"><span className="text-rose-500 mr-2">慈善大使:</span> {m.losers.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
                                                 </div>
                                             </div>
-                                            <button onClick={() => confirm('係咪真係入錯先？') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-800 hover:text-rose-500 p-2 transition-colors"><Icon name="trash" size={18}/></button>
+                                            <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-800 hover:text-rose-500 p-2"><Icon name="trash" size={18}/></button>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {/* 2. 每月含冤錄 */}
+                        {/* 2. 含冤錄 (月) */}
                         {activeTab === 'monthly' && (
                             <div className="space-y-8 animate-pop">
                                 <div className="flex justify-between items-center px-2">
-                                    <h2 className="text-xl font-black gold-text tracking-tight">本月龍虎榜 (含冤錄)</h2>
-                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-900 border-none rounded-xl px-4 py-2 text-[10px] font-black gold-text shadow-xl" />
+                                    <h2 className="text-xl font-black gold-text tracking-tight italic">每月含冤錄</h2>
+                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-900 border-none rounded-xl px-4 py-2 text-[10px] font-black gold-text" />
                                 </div>
                                 {monthlyData.map((p, i) => {
                                     const title = getFunnyTitle(p, i, monthlyData.length);
                                     return (
                                         <div key={p.id} className={`card-dark p-6 rounded-[2.5rem] flex items-center justify-between transition-all ${i === 0 ? 'border-amber-500 shadow-amber-500/10 scale-105' : ''}`}>
-                                            <div className="flex items-center gap-5">
+                                            <div className="flex items-center gap-5 text-left">
                                                 <div className="relative">
                                                     <div className={`w-14 h-14 rounded-full overflow-hidden border-2 bg-slate-950 ${i === 0 ? 'border-amber-400' : 'border-slate-800'}`}>
                                                         {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="users" size={20}/></div>}
@@ -280,10 +304,10 @@
                             </div>
                         )}
 
-                        {/* 3. 執錢位 (記數) */}
+                        {/* 3. 執錢 (記數) */}
                         {activeTab === 'game' && (
                             <div className="space-y-8 animate-pop">
-                                <h2 className="text-center font-black gold-text text-3xl tracking-tighter italic">入波數 (執錢位)</h2>
+                                <h2 className="text-center font-black gold-text text-3xl tracking-tighter italic">執錢位</h2>
                                 <div className="flex gap-3 bg-slate-900 p-2.5 rounded-[2rem] border border-white/5 shadow-2xl">
                                     {[10, 20, 30].map(r => (
                                         <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-5 rounded-2xl font-black text-2xl transition-all active:scale-95 ${baseRate === r ? 'gold-gradient text-white shadow-xl scale-105' : 'text-slate-600'}`}>${r}</button>
@@ -307,21 +331,32 @@
                             </div>
                         )}
 
-                        {/* 4. 名單 (隊員) */}
+                        {/* 4. 受害者 (名單) */}
                         {activeTab === 'profiles' && (
                             <div className="space-y-8 animate-pop">
-                                <h2 className="text-xl font-black gold-text px-2">名單大執位</h2>
+                                <h2 className="text-xl font-black gold-text px-2 italic">受害者名單大執位</h2>
                                 <div className="card-dark p-8 rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl">
-                                    <div onClick={() => {}} className="w-28 h-28 bg-slate-950 rounded-[2.5rem] flex items-center justify-center border-4 border-dashed border-slate-800 overflow-hidden relative group">
-                                        <Icon name="camera" className="text-slate-800" size={32} />
+                                    {/* ★★★ 修復位置：相機掣加咗 onClick ★★★ */}
+                                    <div 
+                                        onClick={() => fileRef.current.click()} 
+                                        className="w-28 h-28 bg-slate-950 rounded-[2.5rem] flex items-center justify-center border-4 border-dashed border-slate-800 overflow-hidden relative group cursor-pointer hover:border-amber-500 transition-colors"
+                                    >
+                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-800 group-hover:text-amber-500 transition-colors" size={32} />}
                                     </div>
-                                    <div className="w-full space-y-4">
-                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-950 p-4 rounded-2xl text-center font-bold text-lg border-none text-white focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="打波同事大名" />
+                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => e.target.files[0] && setPhoto(await resize(e.target.files[0]))} />
+                                    
+                                    <div className="w-full space-y-4 text-center">
+                                        <input 
+                                            value={newName} 
+                                            onChange={e => setNewName(e.target.value)} 
+                                            className="w-full bg-slate-950 p-4 rounded-2xl text-center font-bold text-lg border-none text-white focus:ring-2 focus:ring-amber-500 shadow-inner" 
+                                            placeholder="打波同事大名" 
+                                        />
                                         <button onClick={handleAddUser} className="w-full gold-gradient text-white py-4 rounded-2xl font-black text-lg shadow-xl uppercase tracking-wider">加入受害者名單</button>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 pb-10">
+                                <div className="grid grid-cols-2 gap-4 pb-12">
                                     {users.map(u => (
                                         <div key={u.id} onClick={() => setEditingUser(u)} className="bg-slate-900/40 p-4 rounded-[2rem] border border-white/5 flex items-center gap-4 active:bg-slate-800 transition-colors shadow-sm">
                                             <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-white/5 shadow-inner">
@@ -335,32 +370,25 @@
                         )}
                     </main>
 
-                    {/* 底部導航欄 (滑稽化按鈕) */}
+                    {/* Bottom Nav */}
                     <div className="fixed bottom-10 left-8 right-8 z-50">
                         <nav className="glass-dark p-3 rounded-[3rem] shadow-[0_35px_70px_-15px_rgba(0,0,0,0.8)] flex justify-around items-center border border-white/5">
-                            {/* 今日 */}
                             <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='daily' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}>
                                 <Icon name="calendar" size={20}/>
                                 <p className="text-[7px] font-black mt-1">清算</p>
                             </button>
-                            
-                            {/* 每月 */}
                             <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='monthly' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}>
                                 <Icon name="trophy" size={20}/>
                                 <p className="text-[7px] font-black mt-1">含冤錄</p>
                             </button>
-                            
-                            {/* ＋執錢位 (中掣) */}
                             <button 
                                 onClick={()=>setActiveTab('game')} 
                                 className={`w-18 h-18 -mt-2 rounded-[2rem] flex flex-col items-center justify-center transition-all duration-300 shadow-2xl active:scale-95 ${activeTab==='game' ? 'bg-white text-slate-950 rotate-45' : 'gold-gradient text-white shadow-amber-500/30'}`}
                                 style={{ width: '4.8rem', height: '4.8rem' }}
                             >
                                 <Icon name="plus" size={32} className={activeTab==='game' ? '-rotate-45' : ''}/>
-                                {!activeTab==='game' && <p className="text-[7px] font-black mt-0.5">執錢</p>}
+                                {activeTab!=='game' && <p className="text-[7px] font-black mt-0.5">執錢</p>}
                             </button>
-
-                            {/* 名單 */}
                             <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='profiles' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}>
                                 <Icon name="users" size={20}/>
                                 <p className="text-[7px] font-black mt-1">受害者</p>
@@ -368,12 +396,12 @@
                         </nav>
                     </div>
 
-                    {/* 換相 Modal */}
+                    {/* 易容 Modal */}
                     {editingUser && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-black/95 backdrop-blur-xl">
                             <div className="bg-slate-900 w-full max-w-xs rounded-[4rem] p-10 border border-white/5 text-center animate-pop shadow-2xl">
                                 <h3 className="text-xl font-black gold-text mb-8 italic">幫「{editingUser.name}」易容</h3>
-                                <div onClick={() => editFileRef.current.click()} className="w-40 h-40 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-slate-950 shadow-2xl cursor-pointer overflow-hidden mb-10 group">
+                                <div onClick={() => editFileRef.current.click()} className="w-40 h-40 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-slate-950 shadow-2xl cursor-pointer overflow-hidden mb-10 group relative">
                                     {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover group-hover:opacity-70 transition-opacity" /> : <Icon name="camera" className="text-white" size={40} />}
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                         <Icon name="camera" className="text-white" size={32} />
