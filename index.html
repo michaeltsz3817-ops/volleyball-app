@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>排球龍虎榜 Pro V5</title>
+    <title>排球龍虎榜 Black Gold V5.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -16,27 +16,28 @@
         body { 
             font-family: 'Noto Sans HK', sans-serif; 
             -webkit-tap-highlight-color: transparent; 
-            background: #f1f5f9;
+            background: #0f172a; /* 改為深色底 */
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .glass { 
-            background: rgba(255, 255, 255, 0.95); 
+            background: rgba(30, 41, 59, 0.8); /* 深色磨砂 */
             backdrop-filter: blur(12px); 
             -webkit-backdrop-filter: blur(12px);
         }
-        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); }
-        .indigo-gradient { background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); }
-        .gold-border { border: 2px solid #fbbf24; }
-        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-slide { animation: slideIn 0.4s ease-out forwards; }
+        .gold-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .dark-card { background: #1e293b; border: 1px solid #334155; }
+        .gold-text { color: #f59e0b; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade { animation: fadeIn 0.5s ease-out forwards; }
     </style>
 </head>
-<body>
+<body class="text-slate-200">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
+        // ★★★ 只要保留呢兩部分，數據就永遠唔會失傳 ★★★
         const firebaseConfig = {
             apiKey: "AIzaSyCnKewEU8m4Kf_W09-3eednqHBV-4ZFKr4",
             authDomain: "office-bets-9b5bc.firebaseapp.com",
@@ -45,11 +46,12 @@
             messagingSenderId: "354145606988",
             appId: "1:354145606988:web:fb37bb075f7775de1603e9"
         };
+        const APP_ID = 'vball_v5_pro'; // 保持同 V5 相同，數據就會連通
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const APP_ID = 'vball_v5_pro'; // 升級至 V5 數據集
 
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
@@ -58,7 +60,6 @@
                 plus: <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />,
                 users: <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5s-3 1.34-3 3 1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />,
                 trash: <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />,
-                edit: <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />,
                 camera: <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
             };
             return (
@@ -82,7 +83,6 @@
             const [winners, setWinners] = useState([]);
             const [losers, setLosers] = useState([]);
             const [editingUser, setEditingUser] = useState(null);
-            
             const [newName, setNewName] = useState('');
             const fileRef = useRef(null);
             const editFileRef = useRef(null);
@@ -98,24 +98,15 @@
                     setUsers(s.docs.map(d => ({ id: d.id, ...d.data() })));
                 });
                 const mUnsub = db.collection('artifacts').doc(APP_ID).collection('matches').onSnapshot(s => {
-                    setMatches(s.docs.map(d => ({ 
+                    const data = s.docs.map(d => ({ 
                         id: d.id, ...d.data(), 
                         createdAt: d.data().createdAt?.toDate() || new Date() 
-                    })).sort((a,b) => b.createdAt - a.createdAt));
+                    })).sort((a,b) => b.createdAt - a.createdAt);
+                    setMatches(data.sort((a,b) => b.createdAt - a.createdAt));
                     setLoading(false);
                 });
                 return () => { uUnsub(); mUnsub(); };
             }, [user]);
-
-            const dateStrip = useMemo(() => {
-                const res = [];
-                for (let i = -6; i <= 0; i++) {
-                    const d = new Date(); d.setDate(d.getDate() + i);
-                    const iso = d.toISOString().slice(0, 10);
-                    res.push({ iso, day: d.getDate(), wk: ['日','一','二','三','四','五','六'][d.getDay()] });
-                }
-                return res.reverse();
-            }, []);
 
             const calcStats = (mList) => {
                 const s = {};
@@ -140,11 +131,9 @@
             }, [matches, selectedMonth, users]);
 
             const getTitle = (p, rank, total) => {
-                if (rank === 0 && p.net > 0) return { t: "👑 排球之神", c: "bg-amber-400 text-amber-900 shadow-amber-200" };
-                if (rank === 1 && p.net > 0) return { t: "🥈 波場老二", c: "bg-slate-300 text-slate-800" };
-                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善排球王", c: "bg-red-500 text-white shadow-red-200" };
-                if (rank === total - 2 && p.net < 0) return { t: "🏧 流動提款機", c: "bg-orange-500 text-white" };
-                return { t: "🏐 潛力股", c: "bg-indigo-100 text-indigo-700" };
+                if (rank === 0 && p.net > 0) return { t: "👑 排球之神", c: "bg-amber-400 text-amber-900" };
+                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善排球王", c: "bg-rose-600 text-white" };
+                return { t: "🏐 潛力股", c: "bg-slate-700 text-slate-300" };
             };
 
             const resize = (file) => new Promise(res => {
@@ -163,242 +152,182 @@
                 r.readAsDataURL(file);
             });
 
-            const handleAddUser = async (photo) => {
-                if (!newName.trim()) return alert("請輸入名字");
-                await db.collection('artifacts').doc(APP_ID).collection('users').add({
-                    name: newName, photo, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                setNewName('');
-            };
-
-            const updatePhoto = async (file) => {
-                if (!editingUser) return;
-                const photo = await resize(file);
-                await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo });
-                setEditingUser(null);
-            };
-
-            if (loading) return <div className="h-screen flex items-center justify-center text-indigo-600 font-black animate-pulse bg-white text-xl">PRO 排球場準備中...</div>;
+            if (loading) return <div className="h-screen flex items-center justify-center text-amber-500 font-black bg-slate-900">🏐 BLACK GOLD 入場中...</div>;
 
             return (
-                <div className="max-w-md mx-auto min-h-screen pb-36 relative">
+                <div className="max-w-md mx-auto min-h-screen pb-40">
                     
                     {/* Header */}
-                    <header className="indigo-gradient text-white p-6 rounded-b-[3rem] shadow-2xl sticky top-0 z-40">
+                    <header className="bg-slate-900 text-white p-6 rounded-b-[3rem] shadow-2xl border-b border-slate-800 sticky top-0 z-40">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-                                    排球龍虎榜 <span className="bg-white/20 text-[10px] px-2 py-0.5 rounded-full border border-white/30">V5 PRO</span>
-                                </h1>
-                                <p className="text-indigo-100 text-[10px] font-medium opacity-60 mt-0.5 uppercase tracking-tighter">VOLLEYBALL LEGENDARY TRACKER</p>
+                                <h1 className="text-2xl font-black gold-text tracking-tighter">VOLLEYBALL PRO</h1>
+                                <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase">Office Ledger V5.1</p>
                             </div>
-                            <div className="bg-white/10 p-2.5 rounded-2xl backdrop-blur-md border border-white/10 active:scale-90 transition-transform" onClick={() => setActiveTab('profiles')}>
-                                <Icon name="users" size={20} />
+                            <div className="bg-slate-800 p-2.5 rounded-2xl border border-slate-700 active:scale-95 transition-transform" onClick={() => setActiveTab('profiles')}>
+                                <Icon name="users" size={20} className="gold-text" />
                             </div>
                         </div>
 
                         {activeTab === 'daily' && (
                             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                                {dateStrip.map(d => (
-                                    <button key={d.iso} onClick={() => setSelectedDate(d.iso)} className={`flex flex-col items-center justify-center min-w-[3.8rem] h-20 rounded-3xl transition-all ${selectedDate === d.iso ? 'bg-white text-indigo-700 shadow-xl scale-110' : 'bg-white/10 text-indigo-100'}`}>
-                                        <span className="text-[10px] font-bold mb-1 opacity-60">{d.wk}</span>
-                                        <span className="text-xl font-black">{d.day}</span>
-                                    </button>
-                                ))}
+                                {Array.from({length: 7}).map((_, i) => {
+                                    const d = new Date(); d.setDate(d.getDate() - (6-i));
+                                    const iso = d.toISOString().slice(0, 10);
+                                    const isSelected = selectedDate === iso;
+                                    return (
+                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`flex flex-col items-center justify-center min-w-[3.5rem] h-16 rounded-2xl transition-all ${isSelected ? 'gold-gradient text-white shadow-lg' : 'bg-slate-800 text-slate-500'}`}>
+                                            <span className="text-[10px] font-bold opacity-60 mb-1">{['日','一','二','三','四','五','六'][d.getDay()]}</span>
+                                            <span className="text-lg font-black">{d.getDate()}</span>
+                                        </button>
+                                    );
+                                }).reverse()}
                             </div>
                         )}
                     </header>
 
                     <main className="px-6 py-8">
-                        
-                        {/* 1. 今日結算 */}
+                        {/* 今日收支 */}
                         {activeTab === 'daily' && (
-                            <div className="space-y-8 animate-slide">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="text-xl font-black text-slate-800">今日收支概覽</h2>
-                                    <div className="px-3 py-1 bg-white rounded-full text-[10px] font-black text-indigo-500 shadow-sm border border-indigo-50">{selectedDate}</div>
-                                </div>
-
-                                {dailyData.summary.length > 0 && (
-                                    <div className="bg-white rounded-[2.5rem] p-6 shadow-xl shadow-indigo-100/50 border border-white">
-                                        <div className="flex items-center gap-2 mb-6">
-                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">今日淨額 (收錢對數用)</p>
-                                        </div>
+                            <div className="space-y-8 animate-fade">
+                                <h2 className="text-xl font-black gold-text">今日結算清單</h2>
+                                {dailyData.summary.length > 0 ? (
+                                    <div className="dark-card rounded-[2.5rem] p-6 shadow-2xl">
                                         <div className="space-y-5">
                                             {dailyData.summary.map(p => (
-                                                <div key={p.id} className="flex justify-between items-center group">
+                                                <div key={p.id} className="flex justify-between items-center">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-50 shadow-sm bg-slate-50">
-                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><Icon name="users" size={18}/></div>}
+                                                        <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-700 bg-slate-800">
+                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <Icon name="users" className="m-2.5 text-slate-600" size={20} />}
                                                         </div>
-                                                        <span className="font-bold text-slate-700">{p.name}</span>
+                                                        <span className="font-bold">{p.name}</span>
                                                     </div>
-                                                    <div className={`text-lg font-black font-mono transition-all ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>
+                                                    <span className={`text-lg font-black font-mono ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
                                                         {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
-                                                    </div>
+                                                    </span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
+                                ) : (
+                                    <div className="text-center py-20 text-slate-600 font-bold border-2 border-dashed border-slate-800 rounded-[2.5rem]">今天暫無記錄</div>
                                 )}
-
-                                <div className="space-y-4">
-                                    <h3 className="text-[10px] font-black text-slate-400 px-2 uppercase tracking-widest">場次記錄</h3>
-                                    {dailyData.list.length === 0 ? <div className="bg-white/50 p-12 rounded-[2.5rem] text-center text-slate-300 font-bold border-2 border-dashed border-slate-200">今天尚未開戰 😴</div> : 
-                                        dailyData.list.map((m, idx) => (
-                                            <div key={m.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 flex justify-between items-center group relative overflow-hidden">
-                                                <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500/10"></div>
-                                                <div className="space-y-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full">Game {dailyData.list.length - idx}</span>
-                                                        <span className="text-[10px] font-black text-slate-300">$ {m.baseRate} / 人</span>
-                                                    </div>
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="text-xs font-medium"><span className="text-green-500 font-black">贏:</span> {m.winners.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
-                                                        <div className="text-xs font-medium"><span className="text-rose-500 font-black">輸:</span> {m.losers.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
-                                                    </div>
-                                                </div>
-                                                <button onClick={() => confirm('刪除此場記錄？') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-200 hover:text-rose-500 p-2"><Icon name="trash" size={18}/></button>
-                                            </div>
-                                        ))
-                                    }
-                                </div>
                             </div>
                         )}
 
-                        {/* 2. 每月龍虎榜 */}
+                        {/* 龍虎榜 */}
                         {activeTab === 'monthly' && (
-                            <div className="space-y-8 animate-slide">
-                                <div className="flex justify-between items-center px-1">
-                                    <h2 className="text-xl font-black text-slate-800">每月終極榜單</h2>
-                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white shadow-xl shadow-indigo-100/50 border-none rounded-full px-4 py-2 font-bold text-indigo-600 text-xs focus:ring-2 focus:ring-indigo-500" />
+                            <div className="space-y-6 animate-fade">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-xl font-black gold-text">每月龍虎榜</h2>
+                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-800 border-none rounded-full px-3 py-1 text-[10px] font-bold gold-text" />
                                 </div>
-                                
-                                {monthlyData.length === 0 ? <div className="bg-white p-20 rounded-[3rem] text-center text-slate-300 font-bold">本月尚未有數據</div> : 
-                                    monthlyData.map((p, i) => {
-                                        const title = getTitle(p, i, monthlyData.length);
-                                        return (
-                                            <div key={p.id} className={`bg-white p-6 rounded-[2.5rem] shadow-sm flex items-center justify-between border-2 transition-all ${i === 0 ? 'gold-border shadow-amber-100 scale-105 relative z-10' : 'border-white'}`}>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="relative">
-                                                        <div className={`w-16 h-16 rounded-full overflow-hidden border-4 shadow-inner ${i === 0 ? 'border-amber-100' : 'border-slate-50'}`}>
-                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-100 bg-slate-50"><Icon name="users" size={24}/></div>}
-                                                        </div>
-                                                        <div className="absolute -top-1 -left-1 bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white">{i + 1}</div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-black text-slate-800 text-lg leading-none mb-2">{p.name}</div>
-                                                        <div className={`text-[9px] font-black px-2.5 py-1 rounded-full shadow-sm inline-block ${title.c}`}>{title.t}</div>
-                                                    </div>
+                                {monthlyData.map((p, i) => {
+                                    const title = getTitle(p, i, monthlyData.length);
+                                    return (
+                                        <div key={p.id} className={`dark-card p-5 rounded-[2rem] flex items-center justify-between transition-all ${i === 0 ? 'border-amber-500 scale-105' : ''}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-700">
+                                                    {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <Icon name="users" className="m-3 text-slate-700" size={24}/>}
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className={`text-2xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>
-                                                        {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
-                                                    </div>
-                                                    <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{p.w}W {p.l}L</div>
+                                                <div>
+                                                    <div className="font-bold text-lg leading-none mb-1">{p.name}</div>
+                                                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${title.c}`}>{title.t}</span>
                                                 </div>
                                             </div>
-                                        );
-                                    })
-                                }
+                                            <div className={`text-2xl font-black font-mono ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
+                                                {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
 
-                        {/* 3. 記數 */}
+                        {/* 記數 */}
                         {activeTab === 'game' && (
-                            <div className="space-y-8 animate-slide">
-                                <h2 className="text-center font-black text-slate-800 text-2xl tracking-tight">新一局結算</h2>
-                                <div className="bg-white p-3 rounded-[2.5rem] shadow-xl shadow-indigo-100/50 flex gap-2 border border-slate-50">
+                            <div className="space-y-8 animate-fade">
+                                <h2 className="text-center font-black gold-text text-xl">NEW GAME 🏐</h2>
+                                <div className="flex gap-2 bg-slate-800 p-2 rounded-2xl border border-slate-700">
                                     {[10, 20, 30].map(r => (
-                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-4 rounded-[1.8rem] font-black text-xl transition-all active:scale-95 ${baseRate === r ? 'indigo-gradient text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>${r}</button>
+                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-3 rounded-xl font-black transition-all ${baseRate === r ? 'gold-gradient text-white shadow-lg' : 'text-slate-500'}`}>${r}</button>
                                     ))}
                                 </div>
-                                <div className="grid grid-cols-2 gap-5">
-                                    <div className="space-y-4">
-                                        <div className="text-center py-2 bg-green-50 rounded-full text-[10px] font-black text-green-600 uppercase tracking-widest">贏家 ({winners.length})</div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-3">
+                                        <p className="text-center text-[10px] font-black text-green-400 uppercase tracking-widest">Winners</p>
                                         {users.map(u => (
-                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-black border-2 transition-all active:scale-95 ${winners.includes(u.id) ? 'bg-green-500 text-white border-green-600 shadow-lg shadow-green-100' : 'bg-white text-slate-400 border-slate-100'} ${losers.includes(u.id) ? 'opacity-20 grayscale' : ''}`}>{u.name}</button>
+                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-bold border transition-all ${winners.includes(u.id) ? 'bg-green-500/20 text-green-400 border-green-500' : 'bg-slate-800 text-slate-500 border-slate-700'} ${losers.includes(u.id) ? 'opacity-20' : ''}`}>{u.name}</button>
                                         ))}
                                     </div>
-                                    <div className="space-y-4">
-                                        <div className="text-center py-2 bg-rose-50 rounded-full text-[10px] font-black text-rose-600 uppercase tracking-widest">輸家 ({losers.length})</div>
+                                    <div className="space-y-3">
+                                        <p className="text-center text-[10px] font-black text-rose-400 uppercase tracking-widest">Losers</p>
                                         {users.map(u => (
-                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-black border-2 transition-all active:scale-95 ${losers.includes(u.id) ? 'bg-rose-500 text-white border-rose-600 shadow-lg shadow-rose-100' : 'bg-white text-slate-400 border-slate-100'} ${winners.includes(u.id) ? 'opacity-20 grayscale' : ''}`}>{u.name}</button>
+                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-bold border transition-all ${losers.includes(u.id) ? 'bg-rose-500/20 text-rose-400 border-rose-500' : 'bg-slate-800 text-slate-500 border-slate-700'} ${winners.includes(u.id) ? 'opacity-20' : ''}`}>{u.name}</button>
                                         ))}
                                     </div>
                                 </div>
-                                <button onClick={handleSubmitGame} className="w-full indigo-gradient text-white py-6 rounded-[2.5rem] font-black text-xl shadow-2xl active:scale-95 transition-all mt-4 border-b-4 border-indigo-900">寫入今日戰績</button>
+                                <button onClick={handleSubmitGame} className="w-full gold-gradient text-white py-5 rounded-[2rem] font-black text-lg shadow-2xl active:scale-95 transition-all">完成記錄</button>
                             </div>
                         )}
 
-                        {/* 4. 隊員 */}
+                        {/* 隊員 */}
                         {activeTab === 'profiles' && (
-                            <div className="space-y-8 animate-slide">
-                                <div className="bg-white p-8 rounded-[3rem] shadow-xl shadow-indigo-100/50 border border-slate-50 flex flex-col items-center gap-6">
-                                    <div onClick={() => fileRef.current.click()} className="w-28 h-28 indigo-gradient rounded-[2.5rem] flex items-center justify-center border-4 border-white shadow-xl cursor-pointer overflow-hidden group">
-                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-white/80 group-hover:scale-110 transition-transform" size={32} />}
+                            <div className="space-y-8 animate-fade">
+                                <div className="dark-card p-6 rounded-[2.5rem] flex flex-col items-center gap-6">
+                                    <div onClick={() => fileRef.current.click()} className="w-24 h-24 bg-slate-800 rounded-[2rem] flex items-center justify-center border-2 border-dashed border-slate-700 cursor-pointer overflow-hidden">
+                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-600" size={32} />}
                                     </div>
-                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => {
-                                        if(e.target.files[0]) {
-                                            const p = await resize(e.target.files[0]);
-                                            setPhoto(p);
-                                        }
-                                    }} />
-                                    <div className="w-full space-y-4">
-                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl text-center font-bold text-lg border-none focus:ring-2 focus:ring-indigo-500" placeholder="新同事大名" />
-                                        <button onClick={() => { handleAddUser(photo); setPhoto(null); }} className="w-full indigo-gradient text-white py-4 rounded-2xl font-black text-lg shadow-lg">正式入伙</button>
+                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => { if(e.target.files[0]) setPhoto(await resize(e.target.files[0])); }} />
+                                    <div className="w-full space-y-3">
+                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-800 p-3 rounded-xl text-center font-bold text-white border-none" placeholder="輸入名號" />
+                                        <button onClick={async () => {
+                                            if(!newName.trim()) return;
+                                            await db.collection('artifacts').doc(APP_ID).collection('users').add({ name: newName, photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                                            setNewName(''); setPhoto(null);
+                                        }} className="w-full gold-gradient text-white py-3 rounded-xl font-black">加入名單</button>
                                     </div>
                                 </div>
-
-                                <div className="space-y-3">
-                                    <div className="flex justify-between px-2">
-                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">現役名單 (點擊頭像換相)</h3>
-                                        <span className="text-[10px] font-black text-indigo-400">{users.length} 人</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {users.map(u => (
-                                            <div key={u.id} 
-                                                onClick={() => setEditingUser(u)}
-                                                className="bg-white p-4 rounded-[2rem] border border-slate-50 flex items-center gap-3 shadow-sm active:bg-indigo-50 transition-colors">
-                                                <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-50 shrink-0 shadow-inner">
-                                                    {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><Icon name="users" size={20}/></div>}
-                                                </div>
-                                                <div className="font-bold text-slate-700 text-sm truncate">{u.name}</div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {users.map(u => (
+                                        <div key={u.id} onClick={() => setEditingUser(u)} className="dark-card p-4 rounded-2xl flex items-center gap-3 active:bg-slate-800 transition-colors">
+                                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
+                                                {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <Icon name="users" className="m-2.5 text-slate-700" size={20}/>}
                                             </div>
-                                        ))}
-                                    </div>
+                                            <span className="font-bold text-sm truncate">{u.name}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
                     </main>
 
-                    {/* Navbar */}
-                    <div className="fixed bottom-10 left-8 right-8 z-50">
-                        <nav className="glass p-3 rounded-[2.8rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.2)] flex justify-around items-center border border-white">
-                            <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='daily' ? 'indigo-gradient text-white shadow-lg scale-110' : 'text-slate-300 hover:text-slate-400'}`}><Icon name="calendar"/></button>
-                            <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='monthly' ? 'indigo-gradient text-white shadow-lg scale-110' : 'text-slate-300 hover:text-slate-400'}`}><Icon name="trophy"/></button>
-                            
-                            <div className="relative -top-2">
-                                <button onClick={()=>setActiveTab('game')} className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center transition-all shadow-2xl active:scale-90 ${activeTab==='game' ? 'bg-slate-900 text-white rotate-45' : 'indigo-gradient text-white shadow-indigo-300'}`}>
-                                    <Icon name="plus" size={32} className={activeTab==='game' ? '-rotate-45' : ''}/>
-                                </button>
-                            </div>
-
-                            <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='profiles' ? 'indigo-gradient text-white shadow-lg scale-110' : 'text-slate-300 hover:text-slate-400'}`}><Icon name="users"/></button>
+                    {/* Bottom Navbar */}
+                    <div className="fixed bottom-10 left-10 right-10 z-50">
+                        <nav className="glass p-2 rounded-full border border-slate-700/50 shadow-2xl flex justify-around items-center">
+                            <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all ${activeTab==='daily' ? 'gold-gradient text-white shadow-lg' : 'text-slate-600'}`}><Icon name="calendar"/></button>
+                            <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all ${activeTab==='monthly' ? 'gold-gradient text-white shadow-lg' : 'text-slate-600'}`}><Icon name="trophy"/></button>
+                            <button onClick={()=>setActiveTab('game')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${activeTab==='game' ? 'bg-white text-slate-900 shadow-xl' : 'gold-gradient text-white'}`}><Icon name="plus" size={28}/></button>
+                            <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all ${activeTab==='profiles' ? 'gold-gradient text-white shadow-lg' : 'text-slate-600'}`}><Icon name="users"/></button>
                         </nav>
                     </div>
 
-                    {/* 更換頭像彈窗 */}
+                    {/* 更新頭像 Modal */}
                     {editingUser && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 glass">
-                            <div className="bg-white w-full max-w-xs rounded-[3rem] p-8 shadow-2xl border border-slate-100 animate-slide text-center">
-                                <h3 className="text-xl font-black text-slate-800 mb-6">更換 {editingUser.name} 的頭像</h3>
-                                <div onClick={() => editFileRef.current.click()} className="w-32 h-32 mx-auto indigo-gradient rounded-[2.5rem] flex items-center justify-center border-4 border-white shadow-xl cursor-pointer overflow-hidden mb-6">
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+                            <div className="bg-slate-900 w-full max-w-xs rounded-[3rem] p-8 border border-slate-800 text-center animate-fade">
+                                <h3 className="text-xl font-black gold-text mb-6">更換 {editingUser.name} 的頭像</h3>
+                                <div onClick={() => editFileRef.current.click()} className="w-32 h-32 mx-auto gold-gradient rounded-[2.5rem] flex items-center justify-center border-4 border-slate-900 shadow-2xl cursor-pointer overflow-hidden mb-8">
                                     {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-white" size={32} />}
                                 </div>
-                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={(e) => updatePhoto(e.target.files[0])} />
-                                <button onClick={() => setEditingUser(null)} className="w-full py-4 text-slate-400 font-bold hover:text-slate-600">取消</button>
+                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async (e) => {
+                                    if(e.target.files[0]) {
+                                        const p = await resize(e.target.files[0]);
+                                        await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: p });
+                                        setEditingUser(null);
+                                    }
+                                }} />
+                                <button onClick={() => setEditingUser(null)} className="text-slate-500 font-bold hover:text-white transition-colors">取消返回</button>
                             </div>
                         </div>
                     )}
