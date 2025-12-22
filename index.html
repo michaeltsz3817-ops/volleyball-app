@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>排球慈善基金 V17.0</title>
+    <title>排球慈善基金 V18.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -43,6 +43,7 @@
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #000; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
         }
 
         .dock-blur {
@@ -62,6 +63,7 @@
             width: 100%;
             text-align: center;
             font-weight: 900;
+            font-size: 1.2rem;
         }
 
         .edit-input:focus {
@@ -69,6 +71,8 @@
             outline: none;
             background: rgba(255, 255, 255, 0.1);
         }
+
+        .btn-active:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -92,12 +96,12 @@
         const APP_ID = 'vball_v5_pro'; 
         const ADMIN_PASSWORD = "8888";
 
-        const loadingPhrases = [
-            "正在處理易容申請...",
-            "正在掃描誰又想改名換姓...",
-            "會計師正喺度對數...",
-            "正在連接水魚衛星...",
-            "準備迎接今日嘅大清算..."
+        const Phrases = [
+            "正在掃描誰是最大慈善家...",
+            "正在修復水魚名單...",
+            "會計師正喺度磨刀...",
+            "正在連接排球衛星...",
+            "準備迎接今日嘅清算..."
         ];
 
         const Icon = ({ name, size = 24, className = "" }) => {
@@ -110,7 +114,6 @@
                 coins: <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />,
                 home: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
                 whatsapp: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-13.4 8.38 8.38 0 0 1 3.8.9L21 4.5z" />,
-                search: <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" />,
                 edit: <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             };
             return (
@@ -126,16 +129,15 @@
             const [loading, setLoading] = useState(true);
             const [view, setView] = useState('dashboard');
             const [isAdmin, setIsAdmin] = useState(false);
-            const [phrase] = useState(loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)]);
+            const [loadingPhrase] = useState(Phrases[Math.floor(Math.random() * Phrases.length)]);
 
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-            const [searchQuery, setSearchQuery] = useState("");
             
-            // Edit Profile States
+            // Profile States
             const [newName, setNewName] = useState('');
             const [photo, setPhoto] = useState(null);
-            const [editingUser, setEditingUser] = useState(null); // { id, name, photo }
-            const [editNameInput, setEditNameInput] = useState('');
+            const [editingUser, setEditingUser] = useState(null);
+            const [editNameValue, setEditNameValue] = useState('');
 
             // Game States
             const [baseRate, setBaseRate] = useState(10);
@@ -146,16 +148,26 @@
             const editFileRef = useRef(null);
 
             useEffect(() => {
-                auth.signInAnonymously();
-                const uUnsub = db.collection('artifacts').doc(APP_ID).collection('users').onSnapshot(s => {
-                    setUsers(s.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-                const mUnsub = db.collection('artifacts').doc(APP_ID).collection('matches').onSnapshot(s => {
-                    const data = s.docs.map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toDate() || new Date() }));
-                    setMatches(data.sort((a,b) => b.createdAt - a.createdAt));
-                    setTimeout(() => setLoading(false), 1200);
-                });
-                return () => { uUnsub(); mUnsub(); };
+                const initAuth = async () => {
+                    await auth.signInAnonymously();
+                    
+                    const uUnsub = db.collection('artifacts').doc(APP_ID).collection('users').onSnapshot(s => {
+                        setUsers(s.docs.map(d => ({ id: d.id, ...d.data() })));
+                    }, (err) => console.error(err));
+
+                    const mUnsub = db.collection('artifacts').doc(APP_ID).collection('matches').onSnapshot(s => {
+                        const data = s.docs.map(d => ({ 
+                            id: d.id, 
+                            ...d.data(), 
+                            createdAt: d.data().createdAt?.toDate() || new Date() 
+                        }));
+                        setMatches(data.sort((a,b) => b.createdAt - a.createdAt));
+                        setTimeout(() => setLoading(false), 1000);
+                    }, (err) => console.error(err));
+
+                    return () => { uUnsub(); mUnsub(); };
+                };
+                initAuth();
             }, []);
 
             const calcStats = (mList) => {
@@ -181,14 +193,6 @@
                 return calcStats(list);
             }, [matches, users]);
 
-            const getFunnyTitle = (p, rank, total) => {
-                if (rank === 0 && p.net > 0) return { t: "👑 排球之神 (拜佢就得)", c: "from-amber-400 to-yellow-600", tc: "text-amber-950" };
-                if (rank === 1 && p.net > 0) return { t: "🥈 二奶命 (永遠差一點)", c: "from-slate-300 to-slate-500", tc: "text-slate-900" };
-                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善球王 (散財童子)", c: "from-rose-500 to-rose-800", tc: "text-white" };
-                if (rank === total - 2 && p.net < 0) return { t: "🏧 流動提款機 (123456)", c: "from-orange-400 to-orange-600", tc: "text-white" };
-                return { t: "🏐 打波雜魚 (努力啦細路)", c: "from-slate-700 to-slate-900", tc: "text-slate-400" };
-            };
-
             const resize = (file) => new Promise(res => {
                 const r = new FileReader();
                 r.onload = e => {
@@ -205,9 +209,17 @@
                 r.readAsDataURL(file);
             });
 
-            const handleUpdateProfile = async () => {
+            const getFunnyTitle = (p, rank, total) => {
+                if (rank === 0 && p.net > 0) return { t: "👑 排球之神 (拜佢)", c: "from-amber-400 to-yellow-600", tc: "text-amber-950" };
+                if (rank === 1 && p.net > 0) return { t: "🥈 二奶命 (差少少)", c: "from-slate-300 to-slate-500", tc: "text-slate-900" };
+                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善球王 (功德主)", c: "from-rose-500 to-rose-800", tc: "text-white" };
+                if (rank === total - 2 && p.net < 0) return { t: "🏧 流動提款機", c: "from-orange-400 to-orange-600", tc: "text-white" };
+                return { t: "🏐 打波雜魚", c: "from-slate-700 to-slate-900", tc: "text-slate-400" };
+            };
+
+            const handleFinalUpdate = async () => {
                 if (!editingUser) return;
-                const finalName = editNameInput.trim() || editingUser.name;
+                const finalName = editNameValue.trim() || editingUser.name;
                 await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({
                     name: finalName
                 });
@@ -217,70 +229,64 @@
             if (loading) return (
                 <div className="loading-screen">
                     <div className="relative mb-8">
-                        <div className="w-20 h-20 border-4 border-amber-500/20 rounded-full"></div>
+                        <div className="w-16 h-16 border-4 border-amber-500/20 rounded-full"></div>
                         <div className="absolute inset-0 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                     <h2 className="text-2xl font-black gold-text italic tracking-tighter mb-2">排球慈善基金</h2>
-                    <p className="font-black text-amber-500 animate-pulse italic text-xs uppercase tracking-widest">{phrase}</p>
+                    <p className="font-black text-amber-500/80 animate-pulse text-xs tracking-widest">{loadingPhrase}</p>
                 </div>
             );
 
             return (
                 <div className="min-h-screen px-6 pt-14 safe-pb relative">
-                    <div className="fixed top-0 left-0 w-full h-full -z-10 bg-[radial-gradient(circle_at_50%_0%,_rgba(184,134,11,0.15)_0%,_rgba(0,0,0,0)_65%)]"></div>
+                    <div className="fixed top-0 left-0 w-full h-full -z-10 bg-[radial-gradient(circle_at_50%_0%,_rgba(184,134,11,0.12)_0%,_rgba(0,0,0,0)_60%)]"></div>
 
                     {/* --- DASHBOARD --- */}
                     {view === 'dashboard' && (
                         <div className="space-y-6 page-animate">
-                            <div className="px-2">
-                                <h1 className="text-4xl font-black italic gold-text tracking-tighter leading-none">基金中心</h1>
-                                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1 italic">Victim Settlement Hub</p>
+                            <div className="flex justify-between items-end px-2">
+                                <div>
+                                    <h1 className="text-3xl font-black italic gold-text tracking-tighter">基金中心 DASH</h1>
+                                    <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1">Donation Tracker</p>
+                                </div>
                             </div>
-                            
-                            <div className="bento-card p-8 gold-gradient text-black h-64 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+                            <div className="bento-card p-8 gold-gradient text-black h-56 flex flex-col justify-between shadow-2xl relative overflow-hidden">
                                 <div>
                                     <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">今日累積善款</p>
-                                    <h2 className="text-7xl font-black italic tracking-tighter leading-none mt-2">
-                                        ${dailyStats.list.reduce((a,b) => a + (b.baseRate * b.losers.length), 0)}
+                                    <h2 className="text-6xl font-black italic tracking-tighter leading-none mt-2">
+                                        ${matches.filter(m => m.createdAt.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)).reduce((a,b) => a + (b.baseRate * b.losers.length), 0)}
                                     </h2>
                                 </div>
-                                <div className="bg-black/10 self-start px-4 py-2 rounded-2xl backdrop-blur-md">
-                                    <p className="text-[9px] font-black uppercase italic">本月大慈善家: {monthlyStats[monthlyStats.length-1]?.name || "虛位以待"}</p>
+                                <div className="bg-black/10 self-start px-4 py-2 rounded-2xl backdrop-blur-md border border-black/5">
+                                    <p className="text-[9px] font-black uppercase italic tracking-tighter">本月大善人: {monthlyStats[monthlyStats.length-1]?.name || "虛位以待"}</p>
                                 </div>
-                                <Icon name="coins" size={140} className="absolute -right-10 -bottom-10 opacity-10 rotate-12" />
+                                <Icon name="coins" size={100} className="absolute -right-6 -bottom-6 opacity-10 rotate-12" />
                             </div>
-
                             <div className="grid grid-cols-2 gap-4">
-                                <div onClick={() => setView('daily')} className="bento-card p-6 flex flex-col justify-between h-44 active:scale-95 transition-all">
+                                <div onClick={() => setView('daily')} className="bento-card p-6 flex flex-col justify-between h-40 active:scale-95 transition-all">
                                     <Icon name="coins" className="text-amber-500" />
                                     <div>
                                         <p className="text-sm font-black italic">今日大清算</p>
-                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">會計師專用</p>
+                                        <p className="text-[8px] font-bold text-slate-500 tracking-widest mt-1 uppercase">會計師位</p>
                                     </div>
                                 </div>
-                                <div onClick={() => setView('monthly')} className="bento-card p-6 flex flex-col justify-between h-44 active:scale-95 transition-all">
+                                <div onClick={() => setView('monthly')} className="bento-card p-6 flex flex-col justify-between h-40 active:scale-95 transition-all">
                                     <Icon name="trophy" className="text-amber-500" />
                                     <div>
                                         <p className="text-sm font-black italic">本月含冤錄</p>
-                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">英雄榜單</p>
+                                        <p className="text-[8px] font-bold text-slate-500 tracking-widest mt-1 uppercase">英雄榜單</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* --- DAILY --- */}
+                    {/* --- DAILY (清算) --- */}
                     {view === 'daily' && (
                         <div className="space-y-8 page-animate">
                             <div className="flex justify-between items-center px-2">
                                 <h2 className="text-3xl font-black italic gold-text tracking-tighter">每日大清算 💸</h2>
-                                <button onClick={() => {
-                                    const text = `🏐 *今日捐獻清單 (${selectedDate})*\n\n` + dailyStats.summary.map(p => `${p.net >= 0 ? '🟢' : '🔴'} *${p.name}*: ${p.net >= 0 ? '收' : '畀'} $${Math.abs(p.net).toFixed(0)}`).join('\n') + `\n\n找數喇喂！🧧`;
-                                    const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-                                    alert("WhatsApp 文字已複製！");
-                                }} className="bg-green-600/20 text-green-500 p-3 rounded-2xl border border-green-500/20 active:scale-90"><Icon name="whatsapp" size={18} /></button>
                             </div>
-
                             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1 snap-x">
                                 {Array.from({length: 10}).map((_, i) => {
                                     const d = new Date(); d.setDate(d.getDate() - (9-i));
@@ -293,30 +299,29 @@
                                     );
                                 }).reverse()}
                             </div>
-
                             <div className="bento-card p-7 space-y-6">
-                                <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">會計師終極對數表</p>
+                                <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase italic">會計師終極對數表</p>
                                     <span className="text-[10px] font-bold text-amber-500">{selectedDate}</span>
                                 </div>
                                 {dailyStats.summary.length > 0 ? (
                                     <div className="space-y-5">
                                         {dailyStats.summary.map(p => (
-                                            <div key={p.id} className="flex justify-between items-center group">
-                                                <div className="flex items-center gap-3 text-left shrink-0">
-                                                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-white/5 shrink-0 shadow-inner">
+                                            <div key={p.id} className="flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-white/5 shadow-inner">
                                                         {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={14}/></div>}
                                                     </div>
                                                     <span className="font-black text-slate-100 text-sm truncate w-24">{p.name}</span>
                                                 </div>
-                                                <span className={`text-lg font-black font-mono leading-none ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>
-                                                    {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `比 $${Math.abs(p.net).toFixed(0)}`}
+                                                <span className={`text-lg font-black font-mono ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>
+                                                    {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `畀 $${Math.abs(p.net).toFixed(0)}`}
                                                 </span>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-10 opacity-20 font-black italic uppercase text-xs">這天竟然無人輸錢？</div>
+                                    <div className="text-center py-10 opacity-20 font-black italic text-xs uppercase">這天無人輸錢？不可思議！</div>
                                 )}
                             </div>
                         </div>
@@ -356,18 +361,13 @@
                         </div>
                     )}
 
-                    {/* --- PROFILES --- */}
+                    {/* --- PROFILES (受害者名冊) --- */}
                     {view === 'profiles' && (
                         <div className="space-y-8 page-animate">
                             <h2 className="text-4xl font-black italic gold-text tracking-tighter px-2 leading-none italic">受害者名冊 📖</h2>
                             
-                            <div className="relative">
-                                <Icon name="search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 pl-12 rounded-2xl font-bold focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="尋找受害者..." />
-                            </div>
-
-                            <div className="bento-card p-10 flex flex-col items-center gap-8 shadow-2xl border-white/10">
-                                <div onClick={() => fileRef.current.click()} className="w-32 h-32 bento-card bg-white/5 rounded-[2.8rem] flex items-center justify-center border-4 border-dashed border-white/10 overflow-hidden relative cursor-pointer active:scale-95 transition-all">
+                            <div className="bento-card p-8 flex flex-col items-center gap-8 shadow-2xl border-white/10">
+                                <div onClick={() => fileRef.current.click()} className="w-32 h-32 bento-card bg-white/5 rounded-[2.8rem] flex items-center justify-center border-4 border-dashed border-white/10 overflow-hidden relative cursor-pointer active:scale-95 transition-all shadow-inner">
                                     {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="opacity-20" size={32} />}
                                     <div className="absolute bottom-2 right-2 bg-amber-500 p-1.5 rounded-full shadow-lg"><Icon name="plus" size={10} className="text-black" /></div>
                                 </div>
@@ -375,32 +375,33 @@
 
                                 <div className="w-full space-y-5">
                                     <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-white/5 border-none p-5 rounded-3xl font-black text-center text-lg focus:ring-2 focus:ring-amber-500/40 text-white shadow-inner" placeholder="受害者尊姓大名" />
-                                    <button onClick={async () => { if(!newName.trim()) return alert("名？"); await db.collection('artifacts').doc(APP_ID).collection('users').add({ name: newName.trim(), photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setNewName(''); setPhoto(null); }} className="w-full gold-gradient py-4 rounded-3xl font-black text-black text-lg shadow-xl active:scale-95 italic tracking-widest uppercase">正式入伙登基</button>
+                                    <button onClick={async () => { 
+                                        if(!newName.trim()) return alert("名都無個？"); 
+                                        await db.collection('artifacts').doc(APP_ID).collection('users').add({ name: newName.trim(), photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
+                                        setNewName(''); setPhoto(null); 
+                                    }} className="w-full gold-gradient py-4 rounded-3xl font-black text-black text-lg shadow-xl btn-active italic uppercase">正式入冊</button>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 pb-20">
-                                {users.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                                {users.map(u => (
                                     <div key={u.id} className="relative group">
-                                        <div onClick={() => { setEditingUser(u); setEditNameInput(u.name); }} className="bento-card p-5 flex items-center gap-4 active:bg-white/10 transition-all cursor-pointer">
+                                        <div onClick={() => { setEditingUser(u); setEditNameValue(u.name); }} className="bento-card p-5 flex items-center gap-4 active:bg-white/10 transition-all cursor-pointer">
                                             <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/5 border border-white/5 shadow-inner shrink-0">
                                                 {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10 bg-white/10"><Icon name="user" size={16}/></div>}
                                             </div>
                                             <div className="min-w-0">
                                                 <span className="font-black text-[11px] truncate uppercase tracking-tighter text-slate-300 block">{u.name}</span>
-                                                <div className="flex items-center gap-1 opacity-40">
-                                                    <Icon name="edit" size={8} />
-                                                    <span className="text-[7px] font-bold uppercase">易容/改名</span>
-                                                </div>
+                                                <span className="text-[7px] font-bold uppercase opacity-30">點擊易容</span>
                                             </div>
                                         </div>
-                                        {isAdmin && <button onClick={() => confirm('Kick?') && db.collection('artifacts').doc(APP_ID).collection('users').doc(u.id).delete()} className="absolute -top-2 -right-2 bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-4 border-black active:scale-75 transition-all z-10"><Icon name="trash" size={12} /></button>}
+                                        {isAdmin && <button onClick={() => confirm('Kick?') && db.collection('artifacts').doc(APP_ID).collection('users').doc(u.id).delete()} className="absolute -top-2 -right-2 bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-4 border-black z-10 btn-active"><Icon name="trash" size={12} /></button>}
                                     </div>
                                 ))}
                             </div>
                             
                             <div className="text-center opacity-10 pb-20">
-                                <button onClick={() => { const p = prompt("老細口令:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="text-[10px] font-black uppercase tracking-[0.5em] italic">- Boss Secret Entrance -</button>
+                                <button onClick={() => { const p = prompt("請輸入口令:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="text-[10px] font-black uppercase tracking-[0.5em] italic">- Boss Secret Entrance -</button>
                             </div>
                         </div>
                     )}
@@ -432,7 +433,11 @@
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={async () => { if(!winners.length || !losers.length) return alert("要揀人呀！"); await db.collection('artifacts').doc(APP_ID).collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setWinners([]); setLosers([]); setView('daily'); }} className="w-full gold-gradient py-6 rounded-3xl font-black text-black text-xl shadow-2xl active:scale-95 italic border-b-8 border-amber-900">確定大清算！送佢哋去捐錢</button>
+                            <button onClick={async () => { 
+                                if(!winners.length || !losers.length) return alert("要揀人呀！"); 
+                                await db.collection('artifacts').doc(APP_ID).collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
+                                setWinners([]); setLosers([]); setView('daily'); 
+                            }} className="w-full gold-gradient py-6 rounded-3xl font-black text-black text-xl shadow-2xl btn-active italic border-b-8 border-amber-900">入數！送佢哋去捐錢</button>
                         </div>
                     )}
 
@@ -440,11 +445,7 @@
                     <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 dock-blur rounded-full z-[500] border border-white/10 shadow-[0_40px_80px_-10px_rgba(0,0,0,1)] px-5">
                         <button onClick={() => setView('dashboard')} className={`p-4 rounded-full transition-all duration-300 ${view === 'dashboard' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="home" size={20}/></button>
                         <button onClick={() => setView('daily')} className={`p-4 rounded-full transition-all duration-300 ${view === 'daily' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="coins" size={20}/></button>
-                        
-                        <button onClick={() => setView('game')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${view === 'game' ? 'bg-white text-black rotate-45' : 'gold-gradient text-black'}`}>
-                            <Icon name="plus" size={26} className={view === 'game' ? '-rotate-45' : ''}/>
-                        </button>
-
+                        <button onClick={() => setView('game')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${view === 'game' ? 'bg-white text-black rotate-45' : 'gold-gradient text-black shadow-amber-500/20'}`}><Icon name="plus" size={26} className={view === 'game' ? '-rotate-45' : ''}/></button>
                         <button onClick={() => setView('monthly')} className={`p-4 rounded-full transition-all duration-300 ${view === 'monthly' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
                         <button onClick={() => setView('profiles')} className={`p-4 rounded-full transition-all duration-300 ${view === 'profiles' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="user" size={20}/></button>
                     </nav>
@@ -452,33 +453,33 @@
                     {/* --- MODAL (易容 + 改名) --- */}
                     {editingUser && (
                         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-8 bg-black/95 backdrop-blur-3xl page-animate">
-                            <div className="bento-card bg-[#0A0A0A] w-full max-w-xs p-10 border border-white/10 text-center shadow-2xl relative">
-                                <h3 className="text-xl font-black gold-text mb-2 italic tracking-tighter">幫受害者「易容」改名</h3>
-                                <p className="text-[8px] text-slate-600 font-bold mb-8 tracking-[0.3em] uppercase">Change Image & Name for Victim</p>
+                            <div className="bento-card bg-black w-full max-w-xs p-10 border border-white/10 text-center shadow-2xl relative">
+                                <h3 className="text-xl font-black gold-text mb-2 italic tracking-tighter leading-none">幫受害者易容改名</h3>
+                                <p className="text-[8px] text-slate-600 font-bold mb-10 tracking-[0.3em] uppercase">Update Avatar & Name</p>
+                                <div onClick={() => editFileRef.current.click()} className="w-44 h-44 mx-auto gold-gradient rounded-[3.5rem] flex items-center justify-center border-4 border-black shadow-2xl cursor-pointer overflow-hidden mb-10 relative group">
+                                    {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" /> : <Icon name="camera" size={40} className="text-black/40" />}
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100"><Icon name="camera" size={40} className="text-white" /></div>
+                                </div>
+                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async e => { 
+                                    if(e.target.files[0]) { 
+                                        const p = await resize(e.target.files[0]); 
+                                        await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: p }); 
+                                        setEditingUser(prev => ({...prev, photo: p})); 
+                                    } 
+                                }} />
                                 
-                                <div className="space-y-8">
-                                    {/* 換相區 */}
-                                    <div onClick={() => editFileRef.current.click()} className="w-40 h-40 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-black shadow-2xl cursor-pointer overflow-hidden relative group">
-                                        {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" /> : <Icon name="camera" size={40} className="text-black/40" />}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100"><Icon name="camera" size={32} /></div>
-                                    </div>
-                                    <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async e => { if(e.target.files[0]) { const p = await resize(e.target.files[0]); await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: p }); setEditingUser(prev => ({...prev, photo: p})); } }} />
+                                <div className="space-y-4 mb-8">
+                                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest italic">新名號 (由佢改)</p>
+                                    <input value={editNameValue} onChange={e => setEditNameValue(e.target.value)} className="edit-input" placeholder="輸入新名字..." />
+                                </div>
 
-                                    {/* 改名區 */}
-                                    <div className="space-y-3">
-                                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest italic leading-none">新名號 (想改咩名？)</p>
-                                        <input value={editNameInput} onChange={e => setEditNameInput(e.target.value)} className="edit-input" placeholder="輸入新名字..." />
-                                    </div>
-
-                                    <div className="flex flex-col gap-3">
-                                        <button onClick={handleUpdateProfile} className="w-full gold-gradient py-4 rounded-2xl font-black text-black text-sm active:scale-95 shadow-lg">確認易容改名</button>
-                                        <button onClick={() => setEditingUser(null)} className="text-slate-600 font-black hover:text-white transition-colors text-[9px] tracking-[0.5em] uppercase">算了，佢個樣夠滑稽喇</button>
-                                    </div>
+                                <div className="flex flex-col gap-3">
+                                    <button onClick={handleFinalUpdate} className="w-full gold-gradient py-4 rounded-2xl font-black text-black text-sm btn-active shadow-lg">確認易容改名</button>
+                                    <button onClick={() => setEditingUser(null)} className="text-slate-600 font-black hover:text-white transition-colors text-[9px] tracking-widest uppercase">算數，佢個樣夠滑稽喇</button>
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </div>
             );
         }
