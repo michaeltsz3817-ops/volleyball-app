@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>排球大清算 11.0 Bento Fix</title>
+    <title>排球大清算 12.0 會計師旗艦版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -27,8 +27,8 @@
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 2rem;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
         }
 
         .gold-gradient { background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%); }
@@ -36,18 +36,23 @@
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .page-animate { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        .page-animate { animation: fadeIn 0.3s ease-out forwards; }
 
         .loading-screen {
             position: fixed; inset: 0; background: #000; z-index: 1000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        input::placeholder { color: rgba(255, 255, 255, 0.2); }
+        input::placeholder { color: rgba(255, 255, 255, 0.15); }
         
-        /* 避免底部導航遮擋 */
-        .safe-area-bottom { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+        .dock-blur {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .safe-pb { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
     </style>
 </head>
 <body>
@@ -71,13 +76,12 @@
         const APP_ID = 'vball_v5_pro'; 
         const ADMIN_PASSWORD = "8888";
 
-        const Phrases = [
-            "正在掃描邊個係水魚...",
-            "數據庫正喺度笑緊你...",
-            "慈善基金會多謝你的捐款...",
-            "正在點算今日老細名單...",
-            "排球黑洞正在吞噬金錢...",
-            "正在搜尋邊個輸到想喊..."
+        const loadingPhrases = [
+            "正在掃描今日水魚...",
+            "會計師正喺度磨刀...",
+            "準備迎接大清算...",
+            "正在計算你要捐幾多...",
+            "排球黑洞正在熱身..."
         ];
 
         const Icon = ({ name, size = 24, className = "" }) => {
@@ -87,11 +91,11 @@
                 user: <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
                 camera: <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
                 trash: <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />,
-                back: <path d="M19 12H5M12 19l-7-7 7-7" />,
-                lock: <path d="M12 11V7a4 4 0 0 0-8 0v4M5 11h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z" />
+                coins: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
+                home: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             };
             return (
-                <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
                     {paths[name]}
                 </svg>
             );
@@ -101,11 +105,11 @@
             const [users, setUsers] = useState([]);
             const [matches, setMatches] = useState([]);
             const [loading, setLoading] = useState(true);
-            const [view, setView] = useState('dashboard'); // dashboard, game, profiles
+            const [view, setView] = useState('dashboard'); // dashboard, daily, monthly, profiles, game
             const [isAdmin, setIsAdmin] = useState(false);
-            const [phrase] = useState(Phrases[Math.floor(Math.random() * Phrases.length)]);
+            const [phrase] = useState(loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)]);
 
-            // States for Forms
+            // Form States
             const [newName, setNewName] = useState('');
             const [photo, setPhoto] = useState(null);
             const [baseRate, setBaseRate] = useState(10);
@@ -116,6 +120,9 @@
             const fileRef = useRef(null);
             const editFileRef = useRef(null);
 
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const monthStr = new Date().toISOString().slice(0, 7);
+
             useEffect(() => {
                 auth.signInAnonymously();
                 const uUnsub = db.collection('artifacts').doc(APP_ID).collection('users').onSnapshot(s => {
@@ -124,7 +131,7 @@
                 const mUnsub = db.collection('artifacts').doc(APP_ID).collection('matches').onSnapshot(s => {
                     const data = s.docs.map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toDate() || new Date() }));
                     setMatches(data.sort((a,b) => b.createdAt - a.createdAt));
-                    setTimeout(() => setLoading(false), 1500);
+                    setTimeout(() => setLoading(false), 1200);
                 });
                 return () => { uUnsub(); mUnsub(); };
             }, []);
@@ -135,211 +142,279 @@
                     const img = new Image();
                     img.onload = () => {
                         const cvs = document.createElement('canvas');
-                        const max = 300; const s = max / img.width;
+                        const max = 240; const s = max / img.width;
                         cvs.width = max; cvs.height = img.height * s;
                         cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
-                        res(cvs.toDataURL('image/jpeg', 0.7));
+                        res(cvs.toDataURL('image/jpeg', 0.6));
                     };
                     img.src = e.target.result;
                 };
                 r.readAsDataURL(file);
             });
 
-            const stats = useMemo(() => {
+            const getStats = (mList) => {
                 const s = {};
-                const monthStr = new Date().toISOString().slice(0, 7);
                 users.forEach(u => s[u.id] = { ...u, net: 0, w: 0, l: 0, g: 0 });
-                matches.filter(m => m.createdAt.toISOString().slice(0, 7) === monthStr).forEach(m => {
+                mList.forEach(m => {
                     const pot = (m.baseRate || 0) * (m.losers?.length || 0);
                     const share = m.winners?.length ? pot / m.winners.length : 0;
                     m.winners?.forEach(id => { if(s[id]) { s[id].net += share; s[id].w++; s[id].g++; } });
                     m.losers?.forEach(id => { if(s[id]) { s[id].net -= (m.baseRate || 0); s[id].l++; s[id].g++; } });
                 });
                 return Object.values(s).filter(p => p.g > 0).sort((a,b) => b.net - a.net);
-            }, [users, matches]);
+            };
+
+            const dailyStats = useMemo(() => {
+                const list = matches.filter(m => m.createdAt.toISOString().slice(0, 10) === todayStr);
+                return { list, summary: getStats(list) };
+            }, [matches, users, todayStr]);
+
+            const monthlyStats = useMemo(() => {
+                const list = matches.filter(m => m.createdAt.toISOString().slice(0, 7) === monthStr);
+                return getStats(list);
+            }, [matches, users, monthStr]);
 
             if (loading) return (
                 <div className="loading-screen">
-                    <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="mt-8 font-black text-amber-500 italic text-sm tracking-widest">{phrase}</p>
+                    <div className="w-14 h-14 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="mt-8 font-black text-amber-500 tracking-widest animate-pulse italic text-sm">{phrase}</p>
                 </div>
             );
 
             return (
-                <div className="min-h-screen px-6 pt-14 safe-area-bottom relative">
+                <div className="min-h-screen px-6 pt-14 safe-pb relative">
                     
-                    {/* 背景光暈 */}
-                    <div className="fixed top-0 left-0 w-full h-full -z-10 bg-[radial-gradient(circle_at_50%_0%,_rgba(184,134,11,0.15)_0%,_rgba(0,0,0,0)_70%)]"></div>
+                    {/* 背景光點 */}
+                    <div className="fixed top-0 left-0 w-full h-full -z-10 bg-[radial-gradient(circle_at_50%_0%,_rgba(184,134,11,0.12)_0%,_rgba(0,0,0,0)_60%)]"></div>
 
-                    {/* --- 儀表板 --- */}
+                    {/* --- DASHBOARD (主頁面) --- */}
                     {view === 'dashboard' && (
                         <div className="space-y-6 page-animate">
-                            <div className="flex justify-between items-center px-2">
-                                <h1 className="text-3xl font-black italic gold-text tracking-tighter">大清算 DASH</h1>
-                                <button onClick={() => setView('profiles')} className="w-10 h-10 bento-card flex items-center justify-center">
-                                    <Icon name="user" size={18} className="text-amber-500" />
-                                </button>
-                            </div>
-
-                            {/* 今日卡片 */}
-                            <div className="bento-card p-8 gold-gradient text-black h-56 flex flex-col justify-between shadow-[0_20px_50px_-10px_rgba(184,134,11,0.4)]">
+                            <h1 className="text-3xl font-black italic gold-text tracking-tighter px-2">大清算 DASH</h1>
+                            
+                            {/* 今日總額卡片 */}
+                            <div className="bento-card p-8 gold-gradient text-black h-56 flex flex-col justify-between shadow-2xl relative overflow-hidden">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">今日總身家</p>
-                                    <h2 className="text-6xl font-black italic tracking-tighter leading-none">
-                                        ${matches.filter(m => m.createdAt.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)).reduce((a,b) => a + (b.baseRate * b.losers.length), 0)}
-                                    </h2>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">今日總貢獻額</p>
+                                    <h2 className="text-6xl font-black italic tracking-tighter leading-none">${dailyStats.list.reduce((a,b) => a + (b.baseRate * b.losers.length), 0)}</h2>
                                 </div>
                                 <div className="flex justify-between items-end">
                                     <div className="bg-black/10 px-4 py-2 rounded-2xl backdrop-blur-md">
-                                        <p className="text-[9px] font-black italic uppercase tracking-wider">MVP: {stats[0]?.name || "未有戰神"}</p>
+                                        <p className="text-[9px] font-black uppercase italic">戰神: {monthlyStats[0]?.name || "仲未有"}</p>
                                     </div>
-                                    <button onClick={() => setView('game')} className="bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all">
-                                        <Icon name="plus" size={28} />
-                                    </button>
+                                    <Icon name="trophy" size={80} className="absolute -right-4 -bottom-4 opacity-10" />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                {/* 含冤錄 (長形) */}
-                                <div className="bento-card p-6 col-span-1 row-span-2 space-y-5">
-                                    <p className="text-[10px] font-black uppercase text-slate-500 italic tracking-widest">本月含冤錄</p>
-                                    <div className="space-y-4">
-                                        {stats.slice(0, 6).map((p, i) => (
-                                            <div key={p.id} className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-xl overflow-hidden border ${i === 0 ? 'border-amber-400' : 'border-white/10'}`}>
-                                                    {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-white/5" />}
+                                <div onClick={() => setView('daily')} className="bento-card p-6 flex flex-col justify-between h-40 active:scale-95 transition-all">
+                                    <Icon name="coins" className="text-amber-500" />
+                                    <div>
+                                        <p className="text-[11px] font-black">今日清算</p>
+                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">會計師專用</p>
+                                    </div>
+                                </div>
+                                <div onClick={() => setView('monthly')} className="bento-card p-6 flex flex-col justify-between h-40 active:scale-95 transition-all">
+                                    <Icon name="trophy" className="text-amber-500" />
+                                    <div>
+                                        <p className="text-[11px] font-black">含冤大榜</p>
+                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">全月排行榜</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- DAILY (今日清算：會計師位) --- */}
+                    {view === 'daily' && (
+                        <div className="space-y-8 page-animate">
+                            <div className="flex justify-between items-center px-2">
+                                <h2 className="text-3xl font-black italic gold-text tracking-tighter">今日大清算 💸</h2>
+                                <div className="text-[10px] font-black text-slate-500 tracking-widest">{todayStr}</div>
+                            </div>
+
+                            {/* 核心收錢表 */}
+                            <div className="bento-card p-7 space-y-6">
+                                <p className="text-[10px] font-black text-center text-slate-500 uppercase tracking-widest italic">會計師對數專區</p>
+                                {dailyStats.summary.length > 0 ? (
+                                    <div className="space-y-5">
+                                        {dailyStats.summary.map(p => (
+                                            <div key={p.id} className="flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/5 bg-white/5">
+                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={14}/></div>}
+                                                    </div>
+                                                    <span className="font-black text-slate-100 text-sm">{p.name}</span>
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-[10px] font-black truncate leading-tight">{p.name}</p>
-                                                    <p className={`text-[8px] font-black ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>${p.net.toFixed(0)}</p>
-                                                </div>
+                                                <span className={`text-lg font-black font-mono ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>
+                                                    {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `比 $${Math.abs(p.net).toFixed(0)}`}
+                                                </span>
                                             </div>
                                         ))}
                                     </div>
-                                </div>
-
-                                {/* 水魚數 */}
-                                <div className="bento-card p-6 flex flex-col items-center justify-center text-center gap-2">
-                                    <Icon name="user" className="text-amber-500" size={20} />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">水魚總數</p>
-                                    <p className="text-2xl font-black italic">{users.length}</p>
-                                </div>
-
-                                {/* 管理入口 */}
-                                <div onClick={() => { const p = prompt("請輸入老細口令:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="bento-card p-6 flex flex-col items-center justify-center text-center gap-2 active:bg-white/10">
-                                    <Icon name="lock" className={isAdmin ? "text-rose-500" : "text-slate-700"} size={20} />
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-600">{isAdmin ? "老細權限已開" : "老細專用入口"}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* --- 執錢入帳 --- */}
-                    {view === 'game' && (
-                        <div className="space-y-10 page-animate">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-4xl font-black italic gold-text tracking-tighter">執錢入帳 💸</h2>
-                                <button onClick={() => setView('dashboard')} className="w-10 h-10 bento-card flex items-center justify-center">
-                                    <Icon name="back" size={18} />
-                                </button>
+                                ) : (
+                                    <div className="text-center py-10 opacity-20 font-black italic uppercase">今天仲未有人輸錢</div>
+                                )}
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
-                                {[10, 20, 30].map(r => (
-                                    <button key={r} onClick={() => setBaseRate(r)} className={`p-6 bento-card font-black text-2xl transition-all ${baseRate === r ? 'gold-gradient text-black' : 'text-slate-500'}`}>${r}</button>
+                            <div className="space-y-4">
+                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest px-2">今日詳細場次</p>
+                                {dailyStats.list.map((m, idx) => (
+                                    <div key={m.id} className="bento-card p-5 flex justify-between items-center group relative overflow-hidden">
+                                        <div className="space-y-2">
+                                            <span className="text-[9px] font-black bg-white/5 text-amber-500 px-3 py-1 rounded-full uppercase tracking-widest">Game {dailyStats.list.length - idx} • ${m.baseRate}</span>
+                                            <div className="text-[11px] font-bold">
+                                                <span className="text-green-500 mr-2">贏家:</span> {m.winners.map(id => users.find(u=>u.id===id)?.name || "隱退者").join(', ')}
+                                            </div>
+                                            <div className="text-[11px] font-bold">
+                                                <span className="text-rose-500 mr-2">輸家:</span> {m.losers.map(id => users.find(u=>u.id===id)?.name || "隱退者").join(', ')}
+                                            </div>
+                                        </div>
+                                        {isAdmin && <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-700 hover:text-rose-500"><Icon name="trash" size={16}/></button>}
+                                    </div>
                                 ))}
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-3">
-                                    <p className="text-[10px] font-black text-green-500 uppercase tracking-widest px-2">收錢大佬 ({winners.length})</p>
-                                    {users.map(u => (
-                                        <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(i => i !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 bento-card text-xs font-bold ${winners.includes(u.id) ? 'bg-green-500 text-white border-none' : 'text-slate-500'} ${losers.includes(u.id) ? 'hidden' : ''}`}>{u.name}</button>
-                                    ))}
-                                </div>
-                                <div className="space-y-3">
-                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-2">慈善大使 ({losers.length})</p>
-                                    {users.map(u => (
-                                        <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(i => i !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 bento-card text-xs font-bold ${losers.includes(u.id) ? 'bg-rose-500 text-white border-none' : 'text-slate-500'} ${winners.includes(u.id) ? 'hidden' : ''}`}>{u.name}</button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <button onClick={async () => {
-                                if(!winners.length || !losers.length) return alert("揀人呀大佬！");
-                                await db.collection('artifacts').doc(APP_ID).collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                                setWinners([]); setLosers([]); setView('dashboard');
-                            }} className="w-full gold-gradient py-6 rounded-3xl font-black text-black text-xl shadow-2xl active:scale-95 transition-all">Confirm！送佢哋去攞老補</button>
                         </div>
                     )}
 
-                    {/* --- 水魚名冊 (修正版) --- */}
-                    {view === 'profiles' && (
+                    {/* --- MONTHLY (本月含冤錄：大榜) --- */}
+                    {view === 'monthly' && (
                         <div className="space-y-8 page-animate">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-4xl font-black italic gold-text tracking-tighter">水魚名冊 📖</h2>
-                                <button onClick={() => setView('dashboard')} className="w-10 h-10 bento-card flex items-center justify-center">
-                                    <Icon name="back" size={18} />
-                                </button>
+                            <div className="flex justify-between items-center px-2">
+                                <h2 className="text-3xl font-black italic gold-text tracking-tighter">本月含冤錄 🏆</h2>
+                                <div className="text-[10px] font-black text-slate-500 tracking-widest italic uppercase">{monthStr}</div>
                             </div>
 
-                            {/* 錄入區 */}
-                            <div className="bento-card p-8 space-y-6">
-                                <div className="flex flex-col items-center gap-6">
-                                    {/* 相機按鈕 */}
-                                    <div onClick={() => fileRef.current.click()} className="w-32 h-32 bento-card bg-white/5 rounded-[2.5rem] flex items-center justify-center border-2 border-dashed border-white/20 overflow-hidden relative cursor-pointer active:scale-95 transition-all">
-                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="opacity-20" size={32} />}
-                                        <div className="absolute bottom-2 right-2 bg-amber-500 p-1.5 rounded-full"><Icon name="plus" size={10} className="text-black" /></div>
-                                    </div>
-                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async e => e.target.files[0] && setPhoto(await resize(e.target.files[0]))} />
+                            <div className="space-y-4">
+                                {monthlyStats.map((p, i) => {
+                                    const titles = [
+                                        { t: "👑 排球之神", c: "from-amber-400 to-yellow-600", tc: "text-amber-950" },
+                                        { t: "🥈 二奶命", c: "from-slate-300 to-slate-500", tc: "text-slate-900" },
+                                        { t: "🥉 執波仔", c: "from-orange-400 to-orange-700", tc: "text-orange-950" }
+                                    ];
+                                    const defTitle = p.net < 0 ? { t: "💸 慈善球王", c: "from-rose-500 to-rose-800", tc: "text-white" } : { t: "🏐 排球雜魚", c: "from-slate-700 to-slate-900", tc: "text-slate-400" };
+                                    const title = titles[i] || defTitle;
 
-                                    <div className="w-full space-y-4">
-                                        <input 
-                                            value={newName} 
-                                            onChange={e => setNewName(e.target.value)} 
-                                            className="w-full bg-white/5 border-none p-5 rounded-2xl font-black text-center text-lg focus:ring-2 focus:ring-amber-500/50 text-white" 
-                                            placeholder="請輸入受害者尊姓大名"
-                                        />
-                                        <button onClick={async () => {
-                                            if(!newName.trim()) return alert("名都無個，點入？");
-                                            await db.collection('artifacts').doc(APP_ID).collection('users').add({ name: newName.trim(), photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                                            setNewName(''); setPhoto(null);
-                                        }} className="w-full gold-gradient py-4 rounded-2xl font-black text-black text-lg active:scale-95 transition-all">正式登基入冊</button>
-                                    </div>
+                                    return (
+                                        <div key={p.id} className={`bento-card p-5 flex items-center justify-between border-2 transition-all ${i === 0 ? 'border-amber-500/50 shadow-2xl scale-105' : 'border-white/5'}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative">
+                                                    <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 bg-slate-900 ${i === 0 ? 'border-amber-400 shadow-lg' : 'border-white/5'}`}>
+                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={18}/></div>}
+                                                    </div>
+                                                    <div className="absolute -top-1 -right-1 gold-gradient text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-black">{i + 1}</div>
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-black text-slate-100 text-sm truncate uppercase tracking-tighter italic mb-1">{p.name}</p>
+                                                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r ${title.c} ${title.tc} tracking-widest`}>
+                                                        {title.t}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`text-xl font-black font-mono ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>${p.net.toFixed(0)}</p>
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">{p.w}W {p.l}L</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- PROFILES (水魚名冊) --- */}
+                    {view === 'profiles' && (
+                        <div className="space-y-8 page-animate">
+                            <h2 className="text-4xl font-black italic gold-text tracking-tighter px-2">水魚名冊 📖</h2>
+
+                            <div className="bento-card p-8 flex flex-col items-center gap-6">
+                                <div onClick={() => fileRef.current.click()} className="w-32 h-32 bento-card bg-white/5 rounded-[2.8rem] flex items-center justify-center border-4 border-dashed border-white/10 overflow-hidden relative cursor-pointer active:scale-95 transition-all">
+                                    {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="opacity-20" size={32} />}
+                                    <div className="absolute bottom-2 right-2 bg-amber-500 p-1.5 rounded-full"><Icon name="plus" size={10} className="text-black" /></div>
+                                </div>
+                                <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async e => e.target.files[0] && setPhoto(await resize(e.target.files[0]))} />
+
+                                <div className="w-full space-y-4">
+                                    <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-white/5 border-none p-5 rounded-2xl font-black text-center text-lg focus:ring-2 focus:ring-amber-500/40 text-white" placeholder="輸入大名" />
+                                    <button onClick={async () => { if(!newName.trim()) return alert("名？"); await db.collection('artifacts').doc(APP_ID).collection('users').add({ name: newName.trim(), photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setNewName(''); setPhoto(null); }} className="w-full gold-gradient py-4 rounded-3xl font-black text-black text-lg shadow-xl active:scale-95 transition-all">正式登基</button>
                                 </div>
                             </div>
 
-                            {/* 名單顯示 */}
                             <div className="grid grid-cols-2 gap-4 pb-10">
                                 {users.map(u => (
                                     <div key={u.id} className="relative">
                                         <div onClick={() => setEditingUser(u)} className="bento-card p-4 flex items-center gap-3 active:bg-white/10 transition-all">
-                                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 shrink-0">
-                                                {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={16} /></div>}
+                                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 shrink-0 border border-white/5 shadow-inner">
+                                                {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={16}/></div>}
                                             </div>
                                             <span className="font-black text-xs truncate flex-1 tracking-tighter uppercase">{u.name}</span>
                                         </div>
-                                        {isAdmin && <button onClick={() => confirm(`真係要踢走「${u.name}」？`) && db.collection('artifacts').doc(APP_ID).collection('users').doc(u.id).delete()} className="absolute -top-2 -right-2 bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-black active:scale-75 transition-all"><Icon name="trash" size={12} /></button>}
+                                        {isAdmin && <button onClick={() => confirm('Kick?') && db.collection('artifacts').doc(APP_ID).collection('users').doc(u.id).delete()} className="absolute -top-2 -right-2 bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center border-4 border-black active:scale-75 transition-all"><Icon name="trash" size={12}/></button>}
                                     </div>
                                 ))}
+                            </div>
+                            
+                            <div className="text-center opacity-10 pb-10">
+                                <button onClick={() => { const p = prompt("密碼:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="text-[10px] font-black uppercase tracking-[0.5em]">- Boss Entrance -</button>
                             </div>
                         </div>
                     )}
 
-                    {/* --- 底部 Dock --- */}
-                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 glass-nav p-2 rounded-full flex items-center gap-3 shadow-[0_30px_60px_-10px_rgba(0,0,0,0.8)] z-[500] px-4 border border-white/10">
-                        <button onClick={() => setView('dashboard')} className={`p-4 rounded-full transition-all ${view === 'dashboard' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
-                        <button onClick={() => setView('game')} className={`p-4 rounded-full transition-all ${view === 'game' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="plus" size={20}/></button>
-                        <button onClick={() => setView('profiles')} className={`p-4 rounded-full transition-all ${view === 'profiles' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="user" size={20}/></button>
+                    {/* --- GAME (執錢位) --- */}
+                    {view === 'game' && (
+                        <div className="space-y-10 page-animate">
+                            <h2 className="text-4xl font-black italic gold-text tracking-tighter px-2 text-center">執錢入帳 💸</h2>
+                            
+                            <div className="grid grid-cols-3 gap-3">
+                                {[10, 20, 30].map(r => (
+                                    <button key={r} onClick={() => setBaseRate(r)} className={`p-7 bento-card font-black text-2xl transition-all ${baseRate === r ? 'gold-gradient text-black shadow-xl scale-105' : 'text-slate-600'}`}>${r}</button>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                    <p className="text-[9px] font-black text-green-500 uppercase tracking-widest px-2 italic text-center">收錢大佬 ({winners.length})</p>
+                                    <div className="space-y-2">
+                                        {users.map(u => (
+                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(i => i !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 bento-card text-xs font-black transition-all ${winners.includes(u.id) ? 'bg-green-500 text-white border-none' : 'text-slate-700'} ${losers.includes(u.id) ? 'hidden' : ''}`}>{u.name}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest px-2 italic text-center">慈善大使 ({losers.length})</p>
+                                    <div className="space-y-2">
+                                        {users.map(u => (
+                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(i => i !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 bento-card text-xs font-black transition-all ${losers.includes(u.id) ? 'bg-rose-500 text-white border-none' : 'text-slate-700'} ${winners.includes(u.id) ? 'hidden' : ''}`}>{u.name}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onClick={async () => { if(!winners.length || !losers.length) return alert("揀人！"); await db.collection('artifacts').doc(APP_ID).collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setWinners([]); setLosers([]); setView('daily'); }} className="w-full gold-gradient py-6 rounded-3xl font-black text-black text-xl shadow-2xl active:scale-95 transition-all italic border-b-8 border-amber-900">確認！送佢哋去攞老補</button>
+                        </div>
+                    )}
+
+                    {/* --- BOTTOM DOCK (底部導航欄) --- */}
+                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 dock-blur rounded-full z-[500] border border-white/5 shadow-2xl">
+                        <button onClick={() => setView('dashboard')} className={`p-4 rounded-full transition-all ${view === 'dashboard' ? 'gold-gradient text-black' : 'text-slate-600'}`}><Icon name="home" size={20}/></button>
+                        <button onClick={() => setView('daily')} className={`p-4 rounded-full transition-all ${view === 'daily' ? 'gold-gradient text-black' : 'text-slate-600'}`}><Icon name="coins" size={20}/></button>
+                        <button 
+                            onClick={() => setView('game')} 
+                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-xl active:scale-90 ${view === 'game' ? 'bg-white text-black rotate-45' : 'gold-gradient text-black'}`}
+                        >
+                            <Icon name="plus" size={26} className={view === 'game' ? '-rotate-45' : ''}/>
+                        </button>
+                        <button onClick={() => setView('monthly')} className={`p-4 rounded-full transition-all ${view === 'monthly' ? 'gold-gradient text-black' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
+                        <button onClick={() => setView('profiles')} className={`p-4 rounded-full transition-all ${view === 'profiles' ? 'gold-gradient text-black' : 'text-slate-600'}`}><Icon name="user" size={20}/></button>
                     </nav>
 
-                    {/* --- 易容 Modal --- */}
+                    {/* --- MODAL (易容) --- */}
                     {editingUser && (
-                        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-8 bg-black/95 backdrop-blur-2xl page-animate">
+                        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-8 bg-black/95 backdrop-blur-3xl page-animate">
                             <div className="bento-card bg-slate-950 w-full max-w-xs p-10 border border-white/10 text-center shadow-2xl">
-                                <h3 className="text-xl font-black gold-text mb-2 italic">幫受害者易容</h3>
-                                <p className="text-[8px] text-slate-600 font-bold mb-10 tracking-widest uppercase">Changing Image for {editingUser.name}</p>
-                                <div onClick={() => editFileRef.current.click()} className="w-40 h-40 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-black shadow-2xl cursor-pointer overflow-hidden mb-12 relative group">
+                                <h3 className="text-xl font-black gold-text mb-2 italic">幫「{editingUser.name}」易容</h3>
+                                <p className="text-[8px] text-slate-600 font-bold mb-10 tracking-widest uppercase">Change Profile Image</p>
+                                <div onClick={() => editFileRef.current.click()} className="w-44 h-44 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-black shadow-2xl cursor-pointer overflow-hidden mb-12 relative group">
                                     {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" /> : <Icon name="camera" size={40} className="text-black/40" />}
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100"><Icon name="camera" size={32} /></div>
                                 </div>
