@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>排球龍虎榜 V5.2 PRO</title>
+    <title>排球龍虎榜 V5.3 PRO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -18,19 +18,21 @@
             -webkit-tap-highlight-color: transparent; 
             background: #020617;
             color: #f8fafc;
+            overflow-x: hidden;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .glass-dark { 
-            background: rgba(15, 23, 42, 0.85); 
-            backdrop-filter: blur(16px); 
-            -webkit-backdrop-filter: blur(16px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.9); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
         .gold-gradient { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
         .gold-text { color: #fbbf24; }
-        .card-dark { background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.05); }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-up { animation: slideUp 0.4s ease-out forwards; }
+        .card-dark { background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.03); }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-in { animation: slideIn 0.3s ease-out forwards; }
+        .plus-btn-active { transform: scale(0.9) rotate(45deg); }
     </style>
 </head>
 <body>
@@ -51,41 +53,42 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const APP_ID = 'vball_v5_pro'; // 保持 ID 數據不變
+        const APP_ID = 'vball_v5_pro'; 
 
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
                 calendar: <path d="M19 4H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM16 2v4M8 2v4M3 10h18" />,
                 trophy: <path d="M18 2H6v2H1V9c0 2.2 1.8 4 4 4h1c1.1 2 2.8 3.5 5 3.9V20H8v2h8v-2h-3v-3.1c2.2-.4 3.9-1.9 5-3.9h1c2.2 0 4-1.8 4-4V4h-5V2z" />,
-                plus: <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />,
+                plus: <path d="M12 5v14M5 12h14" />,
                 users: <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5s-3 1.34-3 3 1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />,
-                trash: <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />,
+                trash: <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />,
                 camera: <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
             };
             return (
-                <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={className}>
+                <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
                     {paths[name]}
                 </svg>
             );
         };
 
         function App() {
-            const [activeTab, setActiveTab] = useState('daily');
+            const [activeTab, setActiveTab] = useState('daily'); // daily, monthly, game, profiles
             const [users, setUsers] = useState([]);
             const [matches, setMatches] = useState([]);
             const [loading, setLoading] = useState(true);
-            const [actionLoading, setActionLoading] = useState(false);
             const [user, setUser] = useState(null);
 
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
             const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
-            // 輸入狀態
+            // Game Recording State
             const [baseRate, setBaseRate] = useState(10);
             const [winners, setWinners] = useState([]);
             const [losers, setLosers] = useState([]);
+
+            // Profile State
             const [newName, setNewName] = useState('');
-            const [newPhoto, setNewPhoto] = useState(null);
+            const [photo, setPhoto] = useState(null);
             const [editingUser, setEditingUser] = useState(null);
             
             const fileRef = useRef(null);
@@ -134,10 +137,10 @@
                 return calcStats(list);
             }, [matches, selectedMonth, users]);
 
-            const getTitle = (p, rank, total) => {
+            const getFunnyTitle = (p, rank, total) => {
                 if (rank === 0 && p.net > 0) return { t: "👑 排球之神", c: "bg-amber-400 text-amber-900" };
                 if (rank === total - 1 && p.net < 0) return { t: "💸 慈善排球王", c: "bg-rose-500 text-white" };
-                return { t: "🏐 潛力股", c: "bg-slate-700 text-slate-300" };
+                return { t: "🏐 潛力股", c: "bg-slate-800 text-slate-400" };
             };
 
             const resize = (file) => new Promise(res => {
@@ -146,7 +149,7 @@
                     const img = new Image();
                     img.onload = () => {
                         const cvs = document.createElement('canvas');
-                        const max = 240; const s = max / img.width;
+                        const max = 200; const s = max / img.width;
                         cvs.width = max; cvs.height = img.height * s;
                         cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
                         res(cvs.toDataURL('image/jpeg', 0.6));
@@ -158,55 +161,45 @@
 
             const handleAddUser = async () => {
                 if (!newName.trim()) return alert("請輸入名字");
-                setActionLoading(true);
-                try {
-                    await db.collection('artifacts').doc(APP_ID).collection('users').add({
-                        name: newName.trim(),
-                        photo: newPhoto,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    setNewName(''); setNewPhoto(null);
-                } catch (e) { alert("發生錯誤: " + e.message); }
-                setActionLoading(false);
+                await db.collection('artifacts').doc(APP_ID).collection('users').add({
+                    name: newName, photo, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                setNewName(''); setPhoto(null);
             };
 
-            const handleUpdatePhoto = async (file) => {
-                if (!editingUser) return;
-                setActionLoading(true);
-                const p = await resize(file);
-                await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: p });
-                setEditingUser(null);
-                setActionLoading(false);
+            const handleSubmitGame = async () => {
+                if (!winners.length || !losers.length) return alert("要揀人呀！贏家輸家都要有。");
+                await db.collection('artifacts').doc(APP_ID).collection('matches').add({
+                    baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                setWinners([]); setLosers([]); setActiveTab('daily');
             };
 
-            if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-amber-500">
-                <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <div className="font-black tracking-widest uppercase text-xs">V5 PRO Loading...</div>
-            </div>;
+            if (loading) return <div className="h-screen flex items-center justify-center text-amber-500 font-black bg-slate-950">🏐 PRO ARENA LOADING...</div>;
 
             return (
-                <div className="max-w-md mx-auto min-h-screen pb-40 relative">
+                <div className="max-w-md mx-auto min-h-screen pb-40">
                     
                     {/* Header */}
-                    <header className="bg-slate-950 text-white p-7 rounded-b-[3.5rem] shadow-2xl border-b border-slate-900 sticky top-0 z-40">
-                        <div className="flex justify-between items-center mb-8">
+                    <header className="bg-slate-950 text-white p-6 rounded-b-[3rem] shadow-2xl border-b border-white/5 sticky top-0 z-40">
+                        <div className="flex justify-between items-center mb-6 px-2">
                             <div>
                                 <h1 className="text-2xl font-black gold-text tracking-tighter">VBALL PRO</h1>
-                                <p className="text-slate-500 text-[9px] font-bold tracking-[0.2em] uppercase">Office Edition V5.2</p>
+                                <p className="text-slate-500 text-[9px] font-black tracking-widest uppercase">Office Tracker V5.3</p>
                             </div>
-                            <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-lg active:scale-95 transition-transform" onClick={() => setActiveTab('profiles')}>
+                            <button onClick={() => setActiveTab('profiles')} className="bg-slate-900 p-3 rounded-2xl border border-white/5 active:scale-90 transition-transform shadow-lg">
                                 <Icon name="users" size={20} className="gold-text" />
-                            </div>
+                            </button>
                         </div>
 
                         {activeTab === 'daily' && (
-                            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-                                {Array.from({length: 10}).map((_, i) => {
-                                    const d = new Date(); d.setDate(d.getDate() - (9-i));
+                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-1">
+                                {Array.from({length: 7}).map((_, i) => {
+                                    const d = new Date(); d.setDate(d.getDate() - (6-i));
                                     const iso = d.toISOString().slice(0, 10);
                                     const isSelected = selectedDate === iso;
                                     return (
-                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`flex flex-col items-center justify-center min-w-[3.8rem] h-20 rounded-3xl transition-all ${isSelected ? 'gold-gradient text-white shadow-xl scale-110' : 'bg-slate-900 text-slate-500'}`}>
+                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`flex flex-col items-center justify-center min-w-[3.6rem] h-20 rounded-[1.8rem] transition-all duration-300 ${isSelected ? 'gold-gradient text-white shadow-xl scale-110' : 'bg-slate-900 text-slate-500'}`}>
                                             <span className="text-[10px] font-bold opacity-60 mb-1">{['日','一','二','三','四','五','六'][d.getDay()]}</span>
                                             <span className="text-xl font-black">{d.getDate()}</span>
                                         </button>
@@ -216,25 +209,25 @@
                         )}
                     </header>
 
-                    <main className="px-7 py-8">
-                        {/* TAB 1: 今日收支 */}
+                    <main className="px-6 py-8">
+                        {/* 1. 今日結算 */}
                         {activeTab === 'daily' && (
-                            <div className="space-y-8 animate-up">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="text-xl font-black gold-text">今日結算清單</h2>
-                                    <div className="bg-slate-900 text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-bold border border-slate-800 tracking-wider">{selectedDate}</div>
+                            <div className="space-y-8 animate-in">
+                                <div className="flex justify-between items-center px-2">
+                                    <h2 className="text-xl font-black gold-text">今日收錢清單</h2>
+                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{selectedDate}</div>
                                 </div>
-                                
+
                                 {dailyData.summary.length > 0 ? (
                                     <div className="card-dark rounded-[2.5rem] p-7 shadow-2xl">
                                         <div className="space-y-6">
                                             {dailyData.summary.map(p => (
-                                                <div key={p.id} className="flex justify-between items-center group">
+                                                <div key={p.id} className="flex justify-between items-center">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 shadow-inner">
-                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon name="users" size={20} className="text-slate-700" /></div>}
+                                                        <div className="w-12 h-12 rounded-2xl overflow-hidden border border-white/5 shadow-inner bg-slate-950">
+                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><Icon name="users" size={20} /></div>}
                                                         </div>
-                                                        <span className="font-bold text-slate-200">{p.name}</span>
+                                                        <span className="font-black text-slate-200">{p.name}</span>
                                                     </div>
                                                     <span className={`text-xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
                                                         {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
@@ -244,36 +237,58 @@
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center py-24 text-slate-700 font-bold border-2 border-dashed border-slate-900 rounded-[3rem]">當日暫無對戰記錄 🏐</div>
+                                    <div className="text-center py-24 text-slate-800 font-black border-2 border-dashed border-slate-900 rounded-[3rem] uppercase tracking-tighter">No Games Today</div>
                                 )}
+
+                                <div className="space-y-4">
+                                    <h3 className="text-[10px] font-black text-slate-600 px-3 uppercase tracking-widest">場次細節</h3>
+                                    {dailyData.list.map((m, idx) => (
+                                        <div key={m.id} className="card-dark p-6 rounded-[2rem] flex justify-between items-center shadow-sm relative overflow-hidden group">
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-black bg-white/5 text-amber-500 px-3 py-1 rounded-full">Game {dailyData.list.length - idx}</span>
+                                                    <span className="text-[10px] font-bold text-slate-600">$ {m.baseRate}</span>
+                                                </div>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="text-xs font-bold"><span className="text-green-500 mr-2">贏:</span> {m.winners.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
+                                                    <div className="text-xs font-bold"><span className="text-rose-500 mr-2">輸:</span> {m.losers.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-800 hover:text-rose-500 p-2 transition-colors"><Icon name="trash" size={18}/></button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
-                        {/* TAB 2: 月榜 */}
+                        {/* 2. 每月龍虎榜 */}
                         {activeTab === 'monthly' && (
-                            <div className="space-y-8 animate-up">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="text-xl font-black gold-text tracking-tight">每月龍虎排行榜</h2>
-                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-900 border-none rounded-xl px-4 py-2 text-[10px] font-black gold-text shadow-lg" />
+                            <div className="space-y-8 animate-in">
+                                <div className="flex justify-between items-center px-2">
+                                    <h2 className="text-xl font-black gold-text">每月排行榜</h2>
+                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-900 border-none rounded-xl px-4 py-2 text-[10px] font-black gold-text shadow-xl" />
                                 </div>
                                 {monthlyData.map((p, i) => {
-                                    const title = getTitle(p, i, monthlyData.length);
+                                    const title = getFunnyTitle(p, i, monthlyData.length);
                                     return (
-                                        <div key={p.id} className={`card-dark p-6 rounded-[2.5rem] flex items-center justify-between transition-all ${i === 0 ? 'border-amber-500 shadow-amber-500/5 scale-105' : ''}`}>
+                                        <div key={p.id} className={`card-dark p-6 rounded-[2.5rem] flex items-center justify-between transition-all ${i === 0 ? 'border-amber-500 shadow-amber-500/10 scale-105' : ''}`}>
                                             <div className="flex items-center gap-5">
                                                 <div className="relative">
-                                                    <div className={`w-14 h-14 rounded-full overflow-hidden border-2 bg-slate-900 ${i === 0 ? 'border-amber-400 shadow-lg shadow-amber-500/20' : 'border-slate-800'}`}>
-                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon name="users" size={24} className="text-slate-800"/></div>}
+                                                    <div className={`w-14 h-14 rounded-full overflow-hidden border-2 bg-slate-950 ${i === 0 ? 'border-amber-400' : 'border-slate-800'}`}>
+                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="users" size={20}/></div>}
                                                     </div>
-                                                    <div className="absolute -top-1 -right-1 bg-slate-950 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border border-slate-800 shadow-md">{i + 1}</div>
+                                                    <div className="absolute -top-1 -left-1 bg-white text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-slate-950">{i + 1}</div>
                                                 </div>
                                                 <div>
                                                     <div className="font-black text-slate-100 text-lg leading-none mb-2">{p.name}</div>
                                                     <span className={`text-[9px] font-black px-3 py-1 rounded-full shadow-md ${title.c}`}>{title.t}</span>
                                                 </div>
                                             </div>
-                                            <div className={`text-2xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
-                                                {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
+                                            <div className="text-right">
+                                                <div className={`text-2xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>
+                                                    {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
+                                                </div>
+                                                <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{p.w}W {p.l}L</div>
                                             </div>
                                         </div>
                                     );
@@ -281,107 +296,110 @@
                             </div>
                         )}
 
-                        {/* TAB 3: 記數 */}
+                        {/* 3. 記數 (THE PLUS TAB) */}
                         {activeTab === 'game' && (
-                            <div className="space-y-8 animate-up">
-                                <h2 className="text-center font-black gold-text text-2xl tracking-tight">結算新局</h2>
-                                <div className="flex gap-3 bg-slate-900 p-2.5 rounded-3xl border border-slate-800 shadow-2xl">
+                            <div className="space-y-8 animate-in">
+                                <h2 className="text-center font-black gold-text text-3xl tracking-tighter">NEW SESSION</h2>
+                                <div className="flex gap-3 bg-slate-900 p-2.5 rounded-[2rem] border border-white/5 shadow-2xl">
                                     {[10, 20, 30].map(r => (
-                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-4 rounded-2xl font-black text-xl transition-all ${baseRate === r ? 'gold-gradient text-white shadow-xl scale-105' : 'text-slate-600'}`}>${r}</button>
+                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-5 rounded-2xl font-black text-2xl transition-all active:scale-95 ${baseRate === r ? 'gold-gradient text-white shadow-xl scale-105' : 'text-slate-600'}`}>${r}</button>
                                     ))}
                                 </div>
-                                <div className="grid grid-cols-2 gap-5">
+                                <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-4">
-                                        <div className="text-center py-2.5 bg-green-500/5 rounded-full text-[10px] font-black text-green-400 uppercase tracking-widest border border-green-500/20">Winners</div>
+                                        <div className="text-center py-2.5 bg-green-500/10 rounded-full text-[10px] font-black text-green-400 uppercase tracking-widest border border-green-500/20">Winners</div>
                                         {users.map(u => (
-                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-bold border-2 transition-all active:scale-95 ${winners.includes(u.id) ? 'bg-green-500 text-white border-green-600 shadow-lg shadow-green-500/20' : 'bg-slate-900 text-slate-600 border-slate-800'} ${losers.includes(u.id) ? 'opacity-10 grayscale' : ''}`}>{u.name}</button>
+                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-black border-2 transition-all active:scale-95 ${winners.includes(u.id) ? 'bg-green-500 text-white border-green-600 shadow-lg shadow-green-500/20' : 'bg-slate-900 text-slate-600 border-slate-800'} ${losers.includes(u.id) ? 'opacity-10 grayscale pointer-events-none' : ''}`}>{u.name}</button>
                                         ))}
                                     </div>
                                     <div className="space-y-4">
-                                        <div className="text-center py-2.5 bg-rose-500/5 rounded-full text-[10px] font-black text-rose-400 uppercase tracking-widest border border-rose-500/20">Losers</div>
+                                        <div className="text-center py-2.5 bg-rose-500/10 rounded-full text-[10px] font-black text-rose-400 uppercase tracking-widest border border-rose-500/20">Losers</div>
                                         {users.map(u => (
-                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-bold border-2 transition-all active:scale-95 ${losers.includes(u.id) ? 'bg-rose-500 text-white border-rose-600 shadow-lg shadow-rose-500/20' : 'bg-slate-900 text-slate-600 border-slate-800'} ${winners.includes(u.id) ? 'opacity-10 grayscale' : ''}`}>{u.name}</button>
+                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-black border-2 transition-all active:scale-95 ${losers.includes(u.id) ? 'bg-rose-500 text-white border-rose-600 shadow-lg shadow-rose-500/20' : 'bg-slate-900 text-slate-600 border-slate-800'} ${winners.includes(u.id) ? 'opacity-10 grayscale pointer-events-none' : ''}`}>{u.name}</button>
                                         ))}
                                     </div>
                                 </div>
-                                <button onClick={handleSubmitGame} className="w-full gold-gradient text-white py-6 rounded-[2.5rem] font-black text-xl shadow-2xl active:scale-95 transition-all mt-6 border-b-4 border-amber-800">儲存戰績</button>
+                                <button onClick={handleSubmitGame} className="w-full gold-gradient text-white py-6 rounded-[2.5rem] font-black text-xl shadow-2xl active:scale-95 transition-all mt-6 border-b-4 border-amber-900 uppercase tracking-widest">Submit Result</button>
                             </div>
                         )}
 
-                        {/* TAB 4: 隊員 */}
+                        {/* 4. 隊員 */}
                         {activeTab === 'profiles' && (
-                            <div className="space-y-8 animate-up">
-                                <h2 className="text-xl font-black gold-text">隊員管理</h2>
-                                <div className="card-dark p-8 rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl border-white/5">
-                                    <div onClick={() => fileRef.current.click()} className="w-28 h-28 bg-slate-900 rounded-[2.5rem] flex items-center justify-center border-4 border-dashed border-slate-800 cursor-pointer overflow-hidden relative group hover:border-amber-500 transition-colors">
-                                        {newPhoto ? <img src={newPhoto} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-700 group-hover:text-amber-500 transition-colors" size={32} />}
+                            <div className="space-y-8 animate-in">
+                                <h2 className="text-xl font-black gold-text px-2">名單管理</h2>
+                                <div className="card-dark p-8 rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl">
+                                    <div onClick={() => fileRef.current.click()} className="w-28 h-28 bg-slate-950 rounded-[2.5rem] flex items-center justify-center border-4 border-dashed border-slate-800 cursor-pointer overflow-hidden relative group">
+                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-800 group-hover:text-amber-500 transition-colors" size={32} />}
                                     </div>
-                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => {
-                                        if(e.target.files[0]) {
-                                            const p = await resize(e.target.files[0]);
-                                            setNewPhoto(p);
-                                        }
-                                    }} />
+                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => e.target.files[0] && setPhoto(await resize(e.target.files[0]))} />
                                     <div className="w-full space-y-4">
-                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-950 p-4 rounded-2xl text-center font-bold text-lg border-none text-white focus:ring-2 focus:ring-amber-500" placeholder="同事大名" />
-                                        <button 
-                                            onClick={handleAddUser} 
-                                            disabled={actionLoading}
-                                            className={`w-full gold-gradient text-white py-4 rounded-2xl font-black text-lg shadow-xl ${actionLoading ? 'opacity-50 animate-pulse' : ''}`}
-                                        >
-                                            {actionLoading ? '處理中...' : '加入名單'}
-                                        </button>
+                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-950 p-4 rounded-2xl text-center font-bold text-lg border-none text-white focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="同事名字" />
+                                        <button onClick={handleAddUser} className="w-full gold-gradient text-white py-4 rounded-2xl font-black text-lg shadow-xl uppercase tracking-wider">加入名單</button>
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <p className="text-[10px] font-black text-slate-600 px-3 uppercase tracking-widest">點擊頭像換相 ({users.length} 人)</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {users.map(u => (
-                                            <div key={u.id} 
-                                                onClick={() => setEditingUser(u)}
-                                                className="bg-slate-900/50 p-4 rounded-[2rem] border border-slate-800/50 flex items-center gap-4 active:bg-slate-800 transition-colors">
-                                                <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-slate-800 shadow-inner">
-                                                    {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon name="users" size={18} className="text-slate-800"/></div>}
-                                                </div>
-                                                <div className="font-bold text-slate-300 text-sm truncate">{u.name}</div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {users.map(u => (
+                                        <div key={u.id} onClick={() => setEditingUser(u)} className="bg-slate-900/40 p-4 rounded-[2rem] border border-white/5 flex items-center gap-4 active:bg-slate-800 transition-colors shadow-sm">
+                                            <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-white/5">
+                                                {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="users" size={18}/></div>}
                                             </div>
-                                        ))}
-                                    </div>
+                                            <div className="font-bold text-slate-300 text-sm truncate">{u.name}</div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
                     </main>
 
-                    {/* Bottom Navbar */}
-                    <div className="fixed bottom-10 left-10 right-10 z-50">
-                        <nav className="glass-dark p-3 rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6)] flex justify-around items-center border border-white/10">
-                            <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='daily' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="calendar" size={20}/></button>
-                            <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='monthly' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
+                    {/* FIXED BOTTOM NAV (THE FIX) */}
+                    <div className="fixed bottom-10 left-8 right-8 z-50">
+                        <nav className="glass-dark p-3 rounded-[3rem] shadow-[0_35px_70px_-15px_rgba(0,0,0,0.8)] flex justify-around items-center border border-white/5">
+                            {/* Daily Tab */}
+                            <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='daily' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600 hover:text-slate-400'}`}>
+                                <Icon name="calendar" size={20}/>
+                            </button>
                             
-                            <div className="relative -top-2">
-                                <button onClick={()=>setActiveTab('game')} className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center transition-all shadow-2xl active:scale-90 ${activeTab==='game' ? 'bg-white text-slate-950 rotate-45' : 'gold-gradient text-white shadow-amber-500/20'}`}>
-                                    <Icon name="plus" size={30} className={activeTab==='game' ? '-rotate-45' : ''}/>
-                                </button>
-                            </div>
+                            {/* Monthly Tab */}
+                            <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='monthly' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600 hover:text-slate-400'}`}>
+                                <Icon name="trophy" size={20}/>
+                            </button>
+                            
+                            {/* Game Tab (The Plus Button - Fixed Center) */}
+                            <button 
+                                onClick={()=>setActiveTab('game')} 
+                                className={`w-18 h-18 -mt-2 rounded-[2rem] flex items-center justify-center transition-all duration-300 shadow-2xl active:scale-95 ${activeTab==='game' ? 'bg-white text-slate-950 rotate-45' : 'gold-gradient text-white shadow-amber-500/30'}`}
+                                style={{ width: '4.5rem', height: '4.5rem' }}
+                            >
+                                <Icon name="plus" size={34} className={activeTab==='game' ? '-rotate-45' : ''}/>
+                            </button>
 
-                            <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='profiles' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="users" size={20}/></button>
+                            {/* Profile Tab */}
+                            <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='profiles' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600 hover:text-slate-400'}`}>
+                                <Icon name="users" size={20}/>
+                            </button>
                         </nav>
                     </div>
 
-                    {/* 更新相片 Modal */}
+                    {/* Edit Photo Modal */}
                     {editingUser && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-black/90 backdrop-blur-md">
-                            <div className="bg-slate-900 w-full max-w-xs rounded-[3.5rem] p-10 border border-slate-800 text-center animate-up shadow-2xl">
-                                <h3 className="text-xl font-black gold-text mb-8">更換 {editingUser.name} 的形象</h3>
-                                <div onClick={() => editFileRef.current.click()} className="w-36 h-36 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-slate-950 shadow-2xl cursor-pointer overflow-hidden mb-8 group">
-                                    {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-white" size={40} />}
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-black/95 backdrop-blur-xl">
+                            <div className="bg-slate-900 w-full max-w-xs rounded-[4rem] p-10 border border-white/5 text-center animate-in shadow-2xl">
+                                <h3 className="text-xl font-black gold-text mb-8 tracking-tighter uppercase">Change Avatar</h3>
+                                <div onClick={() => editFileRef.current.click()} className="w-40 h-40 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-slate-950 shadow-2xl cursor-pointer overflow-hidden mb-10 group">
+                                    {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" /> : <Icon name="camera" className="text-white" size={40} />}
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                         <Icon name="camera" className="text-white" size={32} />
                                     </div>
                                 </div>
-                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={(e) => e.target.files[0] && handleUpdatePhoto(e.target.files[0])} />
-                                <button onClick={() => setEditingUser(null)} className="text-slate-500 font-bold hover:text-white transition-colors uppercase text-xs tracking-widest">取消返回</button>
+                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async (e) => {
+                                    if(e.target.files[0]) {
+                                        const p = await resize(e.target.files[0]);
+                                        await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: p });
+                                        setEditingUser(null);
+                                    }
+                                }} />
+                                <button onClick={() => setEditingUser(null)} className="text-slate-600 font-black hover:text-white transition-colors uppercase text-[10px] tracking-widest">Cancel</button>
                             </div>
                         </div>
                     )}
