@@ -2,8 +2,8 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>排球大清算 7.0 老細版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>排球大清算 9.1 黑洞穩定版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -12,25 +12,58 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@300;500;700;900&display=swap');
-        body { 
-            font-family: 'Noto Sans HK', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            background: #020617;
-            color: #f8fafc;
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Noto+Sans+HK:wght@300;500;700;900&display=swap');
+        
+        :root {
+            --accent: #fbbf24;
+            --success: #10b981;
+            --bg: #000000;
         }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', 'Noto Sans HK', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            background: var(--bg);
+            color: #ffffff;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .glass-dark { 
-            background: rgba(15, 23, 42, 0.95); 
+
+        /* 背景旋轉動畫 - 旗艦黑洞效果 */
+        @keyframes spin-slow { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes spin-slow-reverse { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(-360deg); } }
+        
+        .bg-layer-1 { animation: spin-slow 80s linear infinite; opacity: 0.15; position: fixed; top: 50%; left: 50%; width: 200vw; height: 200vw; z-index: 0; pointer-events: none; }
+        .bg-layer-2 { animation: spin-slow-reverse 60s linear infinite; opacity: 0.1; position: fixed; top: 50%; left: 50%; width: 150vw; height: 150vw; z-index: 0; pointer-events: none; }
+        .bg-layer-3 { animation: spin-slow 40s linear infinite; opacity: 0.2; position: fixed; top: 50%; left: 50%; width: 100vw; height: 100vw; z-index: 0; pointer-events: none; }
+
+        .glass-header { 
+            background: rgba(0, 0, 0, 0.7); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-nav { 
+            background: rgba(15, 23, 42, 0.8); 
             backdrop-filter: blur(25px); 
             -webkit-backdrop-filter: blur(25px);
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .gold-gradient { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
-        .gold-text { color: #fbbf24; }
-        .card-dark { background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.03); }
-        @keyframes bounceIn { 0% { transform: scale(0.9); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
-        .animate-pop { animation: bounceIn 0.4s forwards; }
+
+        .glass-pill {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+        }
+
+        @keyframes bounce-in { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-in { animation: bounce-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        @keyframes check-draw { 0% { stroke-dashoffset: 24; } 100% { stroke-dashoffset: 0; } }
+        .animate-check { stroke-dasharray: 24; stroke-dashoffset: 24; animation: check-draw 0.5s ease-out forwards 0.2s; }
     </style>
 </head>
 <body>
@@ -52,8 +85,7 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         const APP_ID = 'vball_v5_pro'; 
-
-        const ADMIN_PASSWORD = "8888"; // 這裡可以修改管理員密碼
+        const ADMIN_PASSWORD = "8888"; 
 
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
@@ -63,6 +95,7 @@
                 users: <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5s-3 1.34-3 3 1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />,
                 camera: <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
                 trash: <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />,
+                check: <path d="M20 6L9 17l-5-5" />,
                 lock: <path d="M12 11V7a4 4 0 0 0-8 0v4M5 11h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z" />
             };
             return (
@@ -78,8 +111,9 @@
             const [matches, setMatches] = useState([]);
             const [loading, setLoading] = useState(true);
             const [user, setUser] = useState(null);
-
-            // 管理員狀態
+            
+            // 提交與管理狀態
+            const [status, setStatus] = useState("idle"); 
             const [isAdmin, setIsAdmin] = useState(false);
             const [showAdminLogin, setShowAdminLogin] = useState(false);
             const [passwordInput, setPasswordInput] = useState("");
@@ -87,16 +121,17 @@
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
             const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
+            // 入數與受害者狀態
             const [baseRate, setBaseRate] = useState(10);
             const [winners, setWinners] = useState([]);
             const [losers, setLosers] = useState([]);
-            
-            const [newName, setNewName] = useState('');
-            const [photo, setPhoto] = useState(null);
+            const [victimName, setVictimName] = useState('');
+            const [victimPhoto, setVictimPhoto] = useState(null);
             const [editingUser, setEditingUser] = useState(null);
             
             const fileRef = useRef(null);
             const editFileRef = useRef(null);
+            const canvasRef = useRef(null);
 
             useEffect(() => {
                 auth.signInAnonymously();
@@ -109,10 +144,7 @@
                     setUsers(s.docs.map(d => ({ id: d.id, ...d.data() })));
                 });
                 const mUnsub = db.collection('artifacts').doc(APP_ID).collection('matches').onSnapshot(s => {
-                    const data = s.docs.map(d => ({ 
-                        id: d.id, ...d.data(), 
-                        createdAt: d.data().createdAt?.toDate() || new Date() 
-                    }));
+                    const data = s.docs.map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toDate() || new Date() }));
                     setMatches(data.sort((a,b) => b.createdAt - a.createdAt));
                     setLoading(false);
                 });
@@ -142,11 +174,9 @@
             }, [matches, selectedMonth, users]);
 
             const getFunnyTitle = (p, rank, total) => {
-                if (rank === 0 && p.net > 0) return { t: "👑 排球之神 (拜佢就得)", c: "bg-amber-400 text-amber-900" };
-                if (rank === 1 && p.net > 0) return { t: "🥈 二奶命 (亞軍專業戶)", c: "bg-slate-300 text-slate-800" };
-                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善球王 (功德無量)", c: "bg-rose-500 text-white" };
-                if (rank === total - 2 && p.net < 0) return { t: "🏧 流動提款機 (123456)", c: "bg-orange-500 text-white" };
-                return { t: "🏐 排球雜魚 (努力啦細路)", c: "bg-slate-800 text-slate-400" };
+                if (rank === 0 && p.net > 0) return { t: "👑 排球之神 (拜就得)", c: "text-amber-400 border-amber-400/30 bg-amber-400/10" };
+                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善球王 (功德大)", c: "text-rose-400 border-rose-400/30 bg-rose-400/10" };
+                return { t: "🏐 排球雜魚", c: "text-slate-400 border-white/10 bg-white/5" };
             };
 
             const resize = (file) => new Promise(res => {
@@ -155,79 +185,118 @@
                     const img = new Image();
                     img.onload = () => {
                         const cvs = document.createElement('canvas');
-                        const max = 240; const s = max / img.width;
+                        const max = 300; const s = max / img.width;
                         cvs.width = max; cvs.height = img.height * s;
                         cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
-                        res(cvs.toDataURL('image/jpeg', 0.6));
+                        res(cvs.toDataURL('image/jpeg', 0.7));
                     };
                     img.src = e.target.result;
                 };
                 r.readAsDataURL(file);
             });
 
-            const handleAddUser = async () => {
-                if (!newName.trim()) return alert("名都無個，點清算？");
-                await db.collection('artifacts').doc(APP_ID).collection('users').add({
-                    name: newName.trim(), photo, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                setNewName(''); setPhoto(null);
+            const fireConfetti = () => {
+                const canvas = canvasRef.current; if (!canvas) return;
+                const ctx = canvas.getContext("2d");
+                const particles = [];
+                const colors = ["#fbbf24", "#10b981", "#fff", "#3b82f6"];
+                canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+                for (let i = 0; i < 60; i++) {
+                    particles.push({
+                        x: canvas.width / 2, y: canvas.height / 2,
+                        vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 2) * 12,
+                        life: 100, color: colors[Math.floor(Math.random() * colors.length)], size: Math.random() * 5 + 2
+                    });
+                }
+                const animate = () => {
+                    if (particles.length === 0) return ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    particles.forEach((p, i) => {
+                        p.x += p.vx; p.y += p.vy; p.vy += 0.4; p.life -= 1.5;
+                        ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 100;
+                        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+                        if (p.life <= 0) particles.splice(i, 1);
+                    });
+                    requestAnimationFrame(animate);
+                };
+                animate();
             };
 
-            const handleDeleteUser = async (id, name) => {
-                if (!confirm(`真係要將「${name}」逐出師門？\n(移除後數據仍會保留在歷史記錄中)`)) return;
-                await db.collection('artifacts').doc(APP_ID).collection('users').doc(id).delete();
-            };
-
-            const handleAdminLogin = () => {
-                if (passwordInput === ADMIN_PASSWORD) {
-                    setIsAdmin(true);
-                    setShowAdminLogin(false);
-                    setPasswordInput("");
-                } else {
-                    alert("口令錯誤！你係咪同事扮老細？");
+            const handleAddVictim = async () => {
+                if (!victimName.trim()) return alert("唔入名，我點知邊個係受害者？");
+                setStatus("loading");
+                try {
+                    await db.collection('artifacts').doc(APP_ID).collection('users').add({
+                        name: victimName.trim(),
+                        photo: victimPhoto,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    setVictimName(''); setVictimPhoto(null);
+                    setStatus("success");
+                    setTimeout(() => setStatus("idle"), 1500);
+                } catch(e) { 
+                    alert("入伙失敗：" + e.message); 
+                    setStatus("idle");
                 }
             };
 
             const handleSubmitGame = async () => {
-                if (!winners.length || !losers.length) return alert("要揀人呀！贏家輸家都要有。");
-                await db.collection('artifacts').doc(APP_ID).collection('matches').add({
-                    baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                setWinners([]); setLosers([]); setActiveTab('daily');
+                if (!winners.length || !losers.length) return alert("揀人呀大佬！");
+                setStatus("loading");
+                try {
+                    await db.collection('artifacts').doc(APP_ID).collection('matches').add({
+                        baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    fireConfetti();
+                    setStatus("success");
+                    setTimeout(() => {
+                        setWinners([]); setLosers([]); setStatus("idle"); setActiveTab('daily');
+                    }, 1500);
+                } catch(e) {
+                    alert("結算失敗：" + e.message);
+                    setStatus("idle");
+                }
             };
 
-            if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-amber-500">
-                <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <div className="font-black text-sm tracking-widest uppercase italic">場地大清算中...</div>
-            </div>;
+            if (loading) return (
+                <div className="h-screen flex flex-col items-center justify-center bg-black">
+                    <div className="w-10 h-10 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
+                    <p className="mt-6 text-[10px] font-black tracking-[0.4em] uppercase text-slate-500 italic">Arena System 9.1 Stable</p>
+                </div>
+            );
 
             return (
-                <div className="max-w-md mx-auto min-h-screen pb-44 relative">
+                <div className="max-w-md mx-auto min-h-screen relative overflow-hidden flex flex-col">
                     
+                    {/* 背景層 */}
+                    <div className="bg-layer-1" style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.05) 0%, transparent 70%)' }}></div>
+                    <div className="bg-layer-2" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.03) 0%, transparent 60%)' }}></div>
+                    <div className="bg-layer-3" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 50%)' }}></div>
+
+                    <canvas ref={canvasRef} className="fixed inset-0 z-50 pointer-events-none" />
+
                     {/* Header */}
-                    <header className="bg-slate-950 text-white p-7 rounded-b-[3.5rem] shadow-2xl border-b border-white/5 sticky top-0 z-40">
-                        <div className="flex justify-between items-center mb-8 px-2">
-                            <div>
-                                <h1 className="text-2xl font-black gold-text tracking-tighter italic">排球大清算</h1>
-                                <p className="text-slate-500 text-[9px] font-black tracking-[0.2em] uppercase">
-                                    {isAdmin ? "ADMIN MODE ON" : "SETTLEMENT V7.0"}
-                                </p>
+                    <header className="glass-header p-6 rounded-b-[2.5rem] z-40 px-8 flex flex-col gap-6">
+                        <div className="flex justify-between items-center">
+                            <div className="flex flex-col">
+                                <h1 className="text-3xl font-black tracking-tighter italic leading-none">大清算</h1>
+                                <p className="text-[8px] font-bold tracking-[0.4em] text-slate-500 uppercase mt-1">BLACK HOLE STABLE 9.1</p>
                             </div>
-                            <button onClick={() => setActiveTab('profiles')} className="bg-slate-900 p-3 rounded-2xl border border-white/5 shadow-lg active:scale-90 transition-transform">
-                                <Icon name="users" size={20} className={isAdmin ? "text-amber-400 fill-amber-400" : "gold-text"} />
+                            <button onClick={() => setActiveTab('profiles')} className="glass-pill p-3 rounded-full active:scale-90 transition-transform">
+                                <Icon name="users" size={20} className={isAdmin ? "text-rose-500" : "text-amber-400"} />
                             </button>
                         </div>
 
                         {activeTab === 'daily' && (
-                            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1 px-1">
-                                {Array.from({length: 7}).map((_, i) => {
-                                    const d = new Date(); d.setDate(d.getDate() - (6-i));
+                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 snap-x">
+                                {Array.from({length: 10}).map((_, i) => {
+                                    const d = new Date(); d.setDate(d.getDate() - (9-i));
                                     const iso = d.toISOString().slice(0, 10);
                                     const isSelected = selectedDate === iso;
                                     return (
-                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`flex flex-col items-center justify-center min-w-[3.6rem] h-20 rounded-3xl transition-all duration-300 ${isSelected ? 'gold-gradient text-white shadow-xl scale-110' : 'bg-slate-900 text-slate-500'}`}>
-                                            <span className="text-[10px] font-bold opacity-60 mb-1">{['日','一','二','三','四','五','六'][d.getDay()]}</span>
-                                            <span className="text-xl font-black">{d.getDate()}</span>
+                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`snap-center flex flex-col items-center justify-center min-w-[3.4rem] h-14 rounded-2xl transition-all duration-500 ${isSelected ? 'bg-white text-black font-black scale-105' : 'text-slate-500 bg-white/5'}`}>
+                                            <span className="text-[10px] opacity-60 mb-1">{['日','一','二','三','四','五','六'][d.getDay()]}</span>
+                                            <span className="text-sm font-bold">{d.getDate()}</span>
                                         </button>
                                     );
                                 }).reverse()}
@@ -235,221 +304,212 @@
                         )}
                     </header>
 
-                    <main className="px-7 py-8">
-                        {/* 1. 今日結算 */}
+                    <main className="px-8 py-10 z-10 flex-1">
+                        
+                        {/* 1. 今日清算 */}
                         {activeTab === 'daily' && (
-                            <div className="space-y-8 animate-pop">
-                                <div className="flex justify-between items-center px-2">
-                                    <h2 className="text-xl font-black gold-text italic">今日邊個係老細？</h2>
-                                    <div className="bg-slate-900 text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-black border border-slate-800">{selectedDate}</div>
+                            <div className="space-y-10 animate-in">
+                                <div className="flex justify-between items-end">
+                                    <h2 className="text-xl font-bold italic">今日老細實錄</h2>
+                                    <div className="text-[9px] font-black text-slate-600 uppercase">{selectedDate}</div>
                                 </div>
-                                
                                 {dailyData.summary.length > 0 ? (
-                                    <div className="card-dark rounded-[2.5rem] p-7 shadow-2xl">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase mb-5 tracking-widest text-center italic">今日淨身家 (收錢位)</p>
-                                        <div className="space-y-6">
-                                            {dailyData.summary.map(p => (
-                                                <div key={p.id} className="flex justify-between items-center">
-                                                    <div className="flex items-center gap-4 text-left">
-                                                        <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner shrink-0">
-                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><Icon name="users" size={20} /></div>}
-                                                        </div>
-                                                        <span className="font-black text-slate-200 truncate w-24">{p.name}</span>
+                                    <div className="glass rounded-[2.5rem] p-8 shadow-2xl space-y-8">
+                                        {dailyData.summary.map(p => (
+                                            <div key={p.id} className="flex justify-between items-center group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-14 h-14 rounded-[1.2rem] overflow-hidden border border-white/10 bg-slate-900 shrink-0">
+                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-20 bg-slate-800"><Icon name="users" size={24} /></div>}
                                                     </div>
-                                                    <span className={`text-xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
-                                                        {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `比 $${Math.abs(p.net).toFixed(0)}`}
-                                                    </span>
+                                                    <div className="flex flex-col truncate w-24">
+                                                        <span className="font-bold text-lg truncate">{p.name}</span>
+                                                        <span className="text-[9px] font-black text-slate-500 uppercase">{p.w}W {p.l}L</span>
+                                                    </div>
                                                 </div>
+                                                <span className={`text-2xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+                                                    {p.net > 0 ? `+$${p.net.toFixed(0)}` : `-$${Math.abs(p.net).toFixed(0)}`}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-32 text-slate-800 font-black border border-white/5 rounded-[3rem] italic">今日未有慘案 😴</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 2. 每月含冤錄 */}
+                        {activeTab === 'monthly' && (
+                            <div className="space-y-10 animate-in">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-xl font-bold italic">每月含冤錄</h2>
+                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black text-amber-400" />
+                                </div>
+                                <div className="space-y-4">
+                                    {monthlyData.map((p, i) => {
+                                        const title = getFunnyTitle(p, i, monthlyData.length);
+                                        return (
+                                            <div key={p.id} className="glass p-5 rounded-[2rem] flex items-center justify-between transition-all duration-500">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="relative shrink-0">
+                                                        <div className={`w-14 h-14 rounded-full overflow-hidden border ${i === 0 ? 'border-amber-400 ring-4 ring-amber-400/10' : 'border-white/10'}`}>
+                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="users" size={24}/></div>}
+                                                        </div>
+                                                        <div className="absolute -top-1 -right-1 bg-white text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black">{i + 1}</div>
+                                                    </div>
+                                                    <div className="truncate w-32">
+                                                        <div className="font-bold text-lg leading-tight mb-1 truncate">{p.name}</div>
+                                                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full border ${title.c} tracking-widest inline-block`}>{title.t}</div>
+                                                    </div>
+                                                </div>
+                                                <div className={`text-xl font-black font-mono ${p.net >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+                                                    {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3. 執錢位 */}
+                        {activeTab === 'game' && (
+                            <div className="space-y-10 animate-in">
+                                {status === "idle" ? (
+                                    <>
+                                        <div className="text-center">
+                                            <h2 className="font-black text-4xl italic tracking-tighter">新局入帳</h2>
+                                            <p className="text-[9px] text-slate-600 font-bold tracking-[0.4em] uppercase mt-2">New Entry Session</p>
+                                        </div>
+                                        <div className="flex gap-4 bg-white/5 p-2 rounded-[2rem] border border-white/5">
+                                            {[10, 20, 30].map(r => (
+                                                <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-4 rounded-2xl font-black text-xl transition-all ${baseRate === r ? 'bg-white text-black' : 'text-slate-500'}`}>${r}</button>
                                             ))}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div className="space-y-4">
+                                                <div className="text-center py-2 bg-emerald-500/10 text-emerald-400 rounded-full text-[9px] font-black uppercase border border-emerald-500/20 italic">收錢大佬</div>
+                                                <div className="grid gap-2">
+                                                    {users.map(u => (
+                                                        <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`p-3 rounded-xl text-[11px] font-bold border transition-all ${winners.includes(u.id) ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white/5 border-white/5 text-slate-500'} ${losers.includes(u.id) ? 'opacity-5 pointer-events-none' : ''}`}>{u.name}</button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="text-center py-2 bg-rose-500/10 text-rose-400 rounded-full text-[9px] font-black uppercase border border-rose-500/20 italic">慈善大使</div>
+                                                <div className="grid gap-2">
+                                                    {users.map(u => (
+                                                        <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`p-3 rounded-xl text-[11px] font-bold border transition-all ${losers.includes(u.id) ? 'bg-rose-500 border-rose-500 text-white' : 'bg-white/5 border-white/5 text-slate-500'} ${winners.includes(u.id) ? 'opacity-5 pointer-events-none' : ''}`}>{u.name}</button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button onClick={handleSubmitGame} className="w-full bg-white text-black py-6 rounded-[2rem] font-black text-xl active:scale-95 transition-all">確認大清算</button>
+                                    </>
+                                ) : status === "loading" ? (
+                                    <div className="flex flex-col items-center justify-center py-24 animate-pulse text-amber-400">
+                                        <div className="w-16 h-16 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mb-8"></div>
+                                        <p className="font-black italic">錢銀交易中...</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-20 space-y-6 rounded-[3rem] bg-emerald-500/10 border border-emerald-500/20 animate-in">
+                                        <div className="bg-emerald-500 p-5 rounded-full shadow-[0_0_40px_rgba(16,185,129,0.5)]">
+                                            <Icon name="check" size={40} className="text-white animate-check" />
+                                        </div>
+                                        <h3 className="text-2xl font-black text-emerald-400 italic">大清算完成！</h3>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 4. 受害者頁面 (核心修復位) */}
+                        {activeTab === 'profiles' && (
+                            <div className="space-y-12 animate-in pb-20">
+                                <h2 className="text-xl font-bold italic underline underline-offset-8 decoration-white/10">受害者名冊</h2>
+                                
+                                {status === "idle" ? (
+                                    <div className="glass p-10 rounded-[3rem] flex flex-col items-center gap-8 shadow-2xl">
+                                        <div 
+                                            onClick={() => fileRef.current.click()} 
+                                            className="w-32 h-32 glass-pill rounded-[2.5rem] flex items-center justify-center overflow-hidden relative group cursor-pointer hover:border-amber-400 transition-all"
+                                        >
+                                            {victimPhoto ? <img src={victimPhoto} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-600 group-hover:text-amber-400 transition-colors" size={40} />}
+                                            <div className="absolute bottom-2 right-2 bg-white text-black p-1.5 rounded-full shadow-lg"><Icon name="plus" size={12} /></div>
+                                        </div>
+                                        <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => {
+                                            if(e.target.files && e.target.files[0]) {
+                                                const p = await resize(e.target.files[0]);
+                                                setVictimPhoto(p);
+                                            }
+                                        }} />
+                                        <div className="w-full space-y-4">
+                                            <input 
+                                                value={victimName} 
+                                                onChange={e => setVictimName(e.target.value)} 
+                                                className="w-full bg-white/5 p-5 rounded-2xl text-center font-bold border border-white/10 text-white focus:ring-4 focus:ring-amber-500/20" 
+                                                placeholder="受害者大名" 
+                                            />
+                                            <button onClick={handleAddVictim} className="w-full bg-amber-500 text-black py-5 rounded-2xl font-black text-lg active:scale-95 transition-all">正式登基</button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center py-24 text-slate-800 font-black border-2 border-dashed border-slate-900 rounded-[3rem] uppercase tracking-tighter">無人輸錢喎 😴</div>
+                                    <div className="glass p-10 rounded-[3rem] text-center italic text-slate-500 animate-pulse">處理名冊中...</div>
                                 )}
-
-                                <div className="space-y-4">
-                                    <h3 className="text-[10px] font-black text-slate-600 px-3 uppercase tracking-widest">當日記錄</h3>
-                                    {dailyData.list.map((m, idx) => (
-                                        <div key={m.id} className="card-dark p-6 rounded-[2rem] flex justify-between items-center shadow-sm relative overflow-hidden group">
-                                            <div className="space-y-3 text-left">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-black bg-white/5 text-amber-500 px-3 py-1 rounded-full italic">第 {dailyData.list.length - idx} 局</span>
-                                                    <span className="text-[10px] font-bold text-slate-700">${m.baseRate} 場</span>
-                                                </div>
-                                                <div className="flex flex-col gap-1.5">
-                                                    <div className="text-xs font-bold"><span className="text-green-500 mr-2">收錢大佬:</span> {m.winners.map(id => users.find(u=>u.id===id)?.name || "隱退受害者").join(', ')}</div>
-                                                    <div className="text-xs font-bold"><span className="text-rose-500 mr-2">慈善大使:</span> {m.losers.map(id => users.find(u=>u.id===id)?.name || "隱退受害者").join(', ')}</div>
-                                                </div>
-                                            </div>
-                                            {isAdmin && <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-800 hover:text-rose-500 p-2"><Icon name="trash" size={18}/></button>}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 2. 含冤錄 (月) */}
-                        {activeTab === 'monthly' && (
-                            <div className="space-y-8 animate-pop">
-                                <div className="flex justify-between items-center px-2">
-                                    <h2 className="text-xl font-black gold-text tracking-tight italic">每月含冤錄</h2>
-                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-900 border-none rounded-xl px-4 py-2 text-[10px] font-black gold-text" />
-                                </div>
-                                {monthlyData.map((p, i) => {
-                                    const title = getFunnyTitle(p, i, monthlyData.length);
-                                    return (
-                                        <div key={p.id} className={`card-dark p-6 rounded-[2.5rem] flex items-center justify-between transition-all ${i === 0 ? 'border-amber-500 shadow-amber-500/10 scale-105' : ''}`}>
-                                            <div className="flex items-center gap-5 text-left shrink-0">
-                                                <div className="relative shrink-0">
-                                                    <div className={`w-14 h-14 rounded-full overflow-hidden border-2 bg-slate-950 ${i === 0 ? 'border-amber-400 shadow-lg shadow-amber-500/20' : 'border-slate-800'}`}>
-                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="users" size={20}/></div>}
-                                                    </div>
-                                                    <div className="absolute -top-1 -left-1 bg-white text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border border-slate-950 shadow-md">{i + 1}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="font-black text-slate-100 text-lg leading-none mb-2 italic truncate w-24">{p.name}</div>
-                                                    <span className={`text-[9px] font-black px-3 py-1 rounded-full shadow-md ${title.c}`}>{title.t}</span>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className={`text-2xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
-                                                    {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
-                                                </div>
-                                                <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{p.w} 勝 {p.l} 負</div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {/* 3. 執錢 (記數) */}
-                        {activeTab === 'game' && (
-                            <div className="space-y-8 animate-pop">
-                                <h2 className="text-center font-black gold-text text-3xl tracking-tighter italic">執錢位</h2>
-                                <div className="flex gap-3 bg-slate-900 p-2.5 rounded-[2rem] border border-white/5 shadow-2xl">
-                                    {[10, 20, 30].map(r => (
-                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-5 rounded-2xl font-black text-2xl transition-all active:scale-95 ${baseRate === r ? 'gold-gradient text-white shadow-xl scale-105' : 'text-slate-600'}`}>${r}</button>
-                                    ))}
-                                </div>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                        <div className="text-center py-2.5 bg-green-500/10 rounded-full text-[10px] font-black text-green-400 uppercase tracking-widest border border-green-500/20 italic">收錢大佬</div>
-                                        {users.map(u => (
-                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-black border-2 transition-all active:scale-95 ${winners.includes(u.id) ? 'bg-green-500 text-white border-green-600 shadow-lg shadow-green-500/20' : 'bg-slate-900 text-slate-600 border-slate-800'} ${losers.includes(u.id) ? 'opacity-10 grayscale pointer-events-none' : ''}`}>{u.name}</button>
-                                        ))}
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div className="text-center py-2.5 bg-rose-500/10 rounded-full text-[10px] font-black text-rose-400 uppercase tracking-widest border border-rose-500/20 italic">慈善大使</div>
-                                        {users.map(u => (
-                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-black border-2 transition-all active:scale-95 ${losers.includes(u.id) ? 'bg-rose-500 text-white border-rose-600 shadow-lg shadow-rose-500/20' : 'bg-slate-900 text-slate-600 border-slate-800'} ${winners.includes(u.id) ? 'opacity-10 grayscale pointer-events-none' : ''}`}>{u.name}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <button onClick={handleSubmitGame} className="w-full gold-gradient text-white py-6 rounded-[2.5rem] font-black text-xl shadow-2xl active:scale-95 transition-all mt-6 border-b-4 border-amber-900 uppercase tracking-widest">寫入今日大清算</button>
-                            </div>
-                        )}
-
-                        {/* 4. 受害者 (名單) */}
-                        {activeTab === 'profiles' && (
-                            <div className="space-y-8 animate-pop">
-                                <h2 className="text-xl font-black gold-text px-2 italic">受害者名單大執位</h2>
-                                <div className="card-dark p-8 rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl">
-                                    <div 
-                                        onClick={() => fileRef.current.click()} 
-                                        className="w-28 h-28 bg-slate-950 rounded-[2.5rem] flex items-center justify-center border-4 border-dashed border-slate-800 overflow-hidden relative group cursor-pointer hover:border-amber-500 transition-colors"
-                                    >
-                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-800 group-hover:text-amber-500 transition-colors" size={32} />}
-                                    </div>
-                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => e.target.files[0] && setPhoto(await resize(e.target.files[0]))} />
-                                    
-                                    <div className="w-full space-y-4 text-center">
-                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-950 p-4 rounded-2xl text-center font-bold text-lg border-none text-white focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="打波同事大名" />
-                                        <button onClick={handleAddUser} className="w-full gold-gradient text-white py-4 rounded-2xl font-black text-lg shadow-xl uppercase tracking-wider">加入受害者名單</button>
-                                    </div>
-                                </div>
 
                                 <div className="grid grid-cols-2 gap-4 pb-12">
                                     {users.map(u => (
                                         <div key={u.id} className="relative group">
-                                            <div onClick={() => setEditingUser(u)} className="bg-slate-900/40 p-4 rounded-[2rem] border border-white/5 flex items-center gap-4 active:bg-slate-800 transition-colors shadow-sm h-full">
-                                                <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-white/5 shadow-inner">
+                                            <div onClick={() => setEditingUser(u)} className="glass-pill p-4 rounded-[1.8rem] flex items-center gap-4 active:bg-white/10 transition-all h-full">
+                                                <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-white/5">
                                                     {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="users" size={18}/></div>}
                                                 </div>
-                                                <div className="font-bold text-slate-300 text-sm truncate">{u.name}</div>
+                                                <div className="font-bold text-slate-300 text-xs truncate italic">{u.name}</div>
                                             </div>
-                                            {/* ★★★ 管理員功能：移除名單 ★★★ */}
                                             {isAdmin && (
-                                                <button 
-                                                    onClick={() => handleDeleteUser(u.id, u.name)}
-                                                    className="absolute -top-2 -right-2 bg-rose-600 text-white p-2 rounded-full shadow-lg border-2 border-slate-950 active:scale-90 transition-all z-10"
-                                                >
-                                                    <Icon name="trash" size={14} />
-                                                </button>
+                                                <button onClick={() => confirm(`真係要斬？`) && db.collection('artifacts').doc(APP_ID).collection('users').doc(u.id).delete()} className="absolute -top-1 -right-1 bg-rose-600 text-white p-2 rounded-full border-2 border-black z-10"><Icon name="trash" size={14} /></button>
                                             )}
                                         </div>
                                     ))}
                                 </div>
 
-                                {/* ★★★ 管理員專用入口 ★★★ */}
-                                <div className="pt-10 pb-20 text-center">
+                                <div className="pt-10 text-center">
                                     {!isAdmin ? (
-                                        <button onClick={() => setShowAdminLogin(true)} className="text-[10px] font-black text-slate-800 uppercase tracking-widest hover:text-slate-700 transition-colors">
-                                            --- 老細專用入口 ---
-                                        </button>
+                                        <button onClick={() => setShowAdminLogin(true)} className="text-[8px] font-bold text-slate-800 uppercase tracking-[0.6em] hover:text-amber-500 transition-colors">- 老細專用位 -</button>
                                     ) : (
-                                        <div className="flex flex-col items-center gap-2">
-                                            <div className="px-4 py-1 bg-amber-400 text-amber-900 rounded-full text-[10px] font-black italic">管理員權限已開啟</div>
-                                            <button onClick={() => setIsAdmin(false)} className="text-[10px] text-slate-500 font-bold underline">登出權限</button>
-                                        </div>
+                                        <button onClick={() => setIsAdmin(false)} className="text-[10px] text-rose-500 font-bold underline">登出權限</button>
                                     )}
                                 </div>
                             </div>
                         )}
                     </main>
 
-                    {/* Bottom Nav */}
-                    <div className="fixed bottom-10 left-8 right-8 z-50">
-                        <nav className="glass-dark p-3 rounded-[3rem] shadow-[0_35px_70px_-15px_rgba(0,0,0,0.8)] flex justify-around items-center border border-white/5">
-                            <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='daily' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}>
-                                <Icon name="calendar" size={20}/>
-                                <p className="text-[7px] font-black mt-1">清算</p>
+                    {/* 導航欄 */}
+                    <div className="fixed bottom-12 left-10 right-10 z-50">
+                        <nav className="glass p-2 rounded-full shadow-2xl flex justify-around items-center px-4 border border-white/10 backdrop-blur-3xl">
+                            <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all duration-500 ${activeTab==='daily' ? 'bg-white text-black shadow-xl' : 'text-slate-600 hover:text-slate-400'}`}>
+                                <Icon name="calendar" size={18}/>
                             </button>
-                            <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='monthly' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}>
-                                <Icon name="trophy" size={20}/>
-                                <p className="text-[7px] font-black mt-1">含冤錄</p>
+                            <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all duration-500 ${activeTab==='monthly' ? 'bg-white text-black shadow-xl' : 'text-slate-600 hover:text-slate-400'}`}>
+                                <Icon name="trophy" size={18}/>
                             </button>
-                            <button 
-                                onClick={()=>setActiveTab('game')} 
-                                className={`w-18 h-18 -mt-2 rounded-[2rem] flex flex-col items-center justify-center transition-all duration-300 shadow-2xl active:scale-95 ${activeTab==='game' ? 'bg-white text-slate-950 rotate-45' : 'gold-gradient text-white shadow-amber-500/30'}`}
-                                style={{ width: '4.8rem', height: '4.8rem' }}
-                            >
+                            <button onClick={()=>setActiveTab('game')} className={`w-16 h-16 -mt-10 rounded-[1.8rem] flex items-center justify-center transition-all duration-300 shadow-2xl active:scale-90 ${activeTab==='game' ? 'bg-emerald-500 text-white rotate-45' : 'bg-white text-black'}`}>
                                 <Icon name="plus" size={32} className={activeTab==='game' ? '-rotate-45' : ''}/>
-                                {activeTab!=='game' && <p className="text-[7px] font-black mt-0.5">執錢</p>}
                             </button>
-                            <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='profiles' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}>
-                                <Icon name="users" size={20}/>
-                                <p className="text-[7px] font-black mt-1">受害者</p>
+                            <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all duration-500 ${activeTab==='profiles' ? 'bg-white text-black shadow-xl' : 'text-slate-600 hover:text-slate-400'}`}>
+                                <Icon name="users" size={18}/>
                             </button>
                         </nav>
                     </div>
 
-                    {/* 管理員登入口彈窗 */}
+                    {/* 管理員 Login */}
                     {showAdminLogin && (
-                        <div className="fixed inset-0 z-[70] flex items-center justify-center p-8 bg-black/95 backdrop-blur-xl">
-                            <div className="bg-slate-900 w-full max-w-xs rounded-[3rem] p-10 border border-white/5 text-center animate-pop">
-                                <Icon name="lock" size={40} className="mx-auto gold-text mb-6" />
-                                <h3 className="text-xl font-black gold-text mb-6 italic">老細請輸入口令</h3>
-                                <input 
-                                    type="password" 
-                                    value={passwordInput} 
-                                    onChange={e => setPasswordInput(e.target.value)}
-                                    className="w-full bg-slate-950 p-4 rounded-2xl text-center font-bold text-lg border-none text-white focus:ring-2 focus:ring-amber-500 mb-6"
-                                    placeholder="口令"
-                                />
-                                <div className="flex flex-col gap-3">
-                                    <button onClick={handleAdminLogin} className="w-full gold-gradient text-white py-4 rounded-2xl font-black">變身老細</button>
-                                    <button onClick={() => setShowAdminLogin(false)} className="text-slate-600 font-bold text-xs uppercase tracking-widest">取消</button>
+                        <div className="fixed inset-0 z-[70] flex items-center justify-center p-8 bg-black/95 backdrop-blur-3xl animate-in">
+                            <div className="glass w-full max-w-xs rounded-[3.5rem] p-10 text-center shadow-2xl">
+                                <h3 className="text-2xl font-black text-white mb-6 italic tracking-tighter underline underline-offset-4 decoration-amber-500">輸入口令</h3>
+                                <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className="w-full bg-white/5 p-5 rounded-2xl text-center font-black text-2xl border border-white/10 text-amber-400 focus:ring-4 focus:ring-amber-500/20 mb-8 tracking-[1em]" autoFocus />
+                                <div className="flex flex-col gap-4">
+                                    <button onClick={() => { if(passwordInput === ADMIN_PASSWORD) { setIsAdmin(true); setShowAdminLogin(false); setPasswordInput(""); } else alert("口令錯咗呀同事！"); }} className="w-full bg-white text-black py-4 rounded-2xl font-black tracking-widest">解鎖</button>
+                                    <button onClick={() => setShowAdminLogin(false)} className="text-slate-600 text-[10px] font-bold uppercase tracking-widest">撤退</button>
                                 </div>
                             </div>
                         </div>
@@ -457,14 +517,12 @@
 
                     {/* 易容 Modal */}
                     {editingUser && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-black/95 backdrop-blur-xl">
-                            <div className="bg-slate-900 w-full max-w-xs rounded-[4rem] p-10 border border-white/5 text-center animate-pop shadow-2xl">
-                                <h3 className="text-xl font-black gold-text mb-8 italic">幫「{editingUser.name}」易容</h3>
-                                <div onClick={() => editFileRef.current.click()} className="w-40 h-40 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-slate-950 shadow-2xl cursor-pointer overflow-hidden mb-10 group relative">
-                                    {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover group-hover:opacity-70 transition-opacity" /> : <Icon name="camera" className="text-white" size={40} />}
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                        <Icon name="camera" className="text-white" size={32} />
-                                    </div>
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-black/98 backdrop-blur-3xl animate-in">
+                            <div className="glass w-full max-w-xs rounded-[4rem] p-12 text-center relative">
+                                <h3 className="text-xl font-bold text-white mb-10 italic underline underline-offset-8 decoration-amber-500/50">幫受害者易容</h3>
+                                <div onClick={() => editFileRef.current.click()} className="w-44 h-44 mx-auto bg-white/5 rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl cursor-pointer overflow-hidden mb-12 group relative transition-all">
+                                    {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" /> : <Icon name="camera" className="text-white/20" size={50} />}
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="camera" className="text-white" size={40} /></div>
                                 </div>
                                 <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async (e) => {
                                     if(e.target.files[0]) {
@@ -473,7 +531,7 @@
                                         setEditingUser(null);
                                     }
                                 }} />
-                                <button onClick={() => setEditingUser(null)} className="text-slate-600 font-black hover:text-white transition-colors uppercase text-[10px] tracking-widest">算數，唔易容住</button>
+                                <button onClick={() => setEditingUser(null)} className="text-slate-600 font-bold text-[10px] tracking-[0.4em] uppercase">放棄易容</button>
                             </div>
                         </div>
                     )}
