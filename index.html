@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>排球龍虎榜 Black Gold V5.1</title>
+    <title>排球龍虎榜 V5.2 PRO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -16,28 +16,29 @@
         body { 
             font-family: 'Noto Sans HK', sans-serif; 
             -webkit-tap-highlight-color: transparent; 
-            background: #0f172a; /* 改為深色底 */
+            background: #020617;
+            color: #f8fafc;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .glass { 
-            background: rgba(30, 41, 59, 0.8); /* 深色磨砂 */
-            backdrop-filter: blur(12px); 
-            -webkit-backdrop-filter: blur(12px);
+        .glass-dark { 
+            background: rgba(15, 23, 42, 0.85); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .gold-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-        .dark-card { background: #1e293b; border: 1px solid #334155; }
-        .gold-text { color: #f59e0b; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade { animation: fadeIn 0.5s ease-out forwards; }
+        .gold-gradient { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
+        .gold-text { color: #fbbf24; }
+        .card-dark { background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.05); }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-up { animation: slideUp 0.4s ease-out forwards; }
     </style>
 </head>
-<body class="text-slate-200">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // ★★★ 只要保留呢兩部分，數據就永遠唔會失傳 ★★★
         const firebaseConfig = {
             apiKey: "AIzaSyCnKewEU8m4Kf_W09-3eednqHBV-4ZFKr4",
             authDomain: "office-bets-9b5bc.firebaseapp.com",
@@ -46,12 +47,11 @@
             messagingSenderId: "354145606988",
             appId: "1:354145606988:web:fb37bb075f7775de1603e9"
         };
-        const APP_ID = 'vball_v5_pro'; // 保持同 V5 相同，數據就會連通
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const APP_ID = 'vball_v5_pro'; // 保持 ID 數據不變
 
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
@@ -74,16 +74,20 @@
             const [users, setUsers] = useState([]);
             const [matches, setMatches] = useState([]);
             const [loading, setLoading] = useState(true);
+            const [actionLoading, setActionLoading] = useState(false);
             const [user, setUser] = useState(null);
 
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
             const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
+            // 輸入狀態
             const [baseRate, setBaseRate] = useState(10);
             const [winners, setWinners] = useState([]);
             const [losers, setLosers] = useState([]);
-            const [editingUser, setEditingUser] = useState(null);
             const [newName, setNewName] = useState('');
+            const [newPhoto, setNewPhoto] = useState(null);
+            const [editingUser, setEditingUser] = useState(null);
+            
             const fileRef = useRef(null);
             const editFileRef = useRef(null);
 
@@ -101,7 +105,7 @@
                     const data = s.docs.map(d => ({ 
                         id: d.id, ...d.data(), 
                         createdAt: d.data().createdAt?.toDate() || new Date() 
-                    })).sort((a,b) => b.createdAt - a.createdAt);
+                    }));
                     setMatches(data.sort((a,b) => b.createdAt - a.createdAt));
                     setLoading(false);
                 });
@@ -132,7 +136,7 @@
 
             const getTitle = (p, rank, total) => {
                 if (rank === 0 && p.net > 0) return { t: "👑 排球之神", c: "bg-amber-400 text-amber-900" };
-                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善排球王", c: "bg-rose-600 text-white" };
+                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善排球王", c: "bg-rose-500 text-white" };
                 return { t: "🏐 潛力股", c: "bg-slate-700 text-slate-300" };
             };
 
@@ -142,7 +146,7 @@
                     const img = new Image();
                     img.onload = () => {
                         const cvs = document.createElement('canvas');
-                        const max = 200; const s = max / img.width;
+                        const max = 240; const s = max / img.width;
                         cvs.width = max; cvs.height = img.height * s;
                         cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
                         res(cvs.toDataURL('image/jpeg', 0.6));
@@ -152,33 +156,59 @@
                 r.readAsDataURL(file);
             });
 
-            if (loading) return <div className="h-screen flex items-center justify-center text-amber-500 font-black bg-slate-900">🏐 BLACK GOLD 入場中...</div>;
+            const handleAddUser = async () => {
+                if (!newName.trim()) return alert("請輸入名字");
+                setActionLoading(true);
+                try {
+                    await db.collection('artifacts').doc(APP_ID).collection('users').add({
+                        name: newName.trim(),
+                        photo: newPhoto,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    setNewName(''); setNewPhoto(null);
+                } catch (e) { alert("發生錯誤: " + e.message); }
+                setActionLoading(false);
+            };
+
+            const handleUpdatePhoto = async (file) => {
+                if (!editingUser) return;
+                setActionLoading(true);
+                const p = await resize(file);
+                await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: p });
+                setEditingUser(null);
+                setActionLoading(false);
+            };
+
+            if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-amber-500">
+                <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <div className="font-black tracking-widest uppercase text-xs">V5 PRO Loading...</div>
+            </div>;
 
             return (
-                <div className="max-w-md mx-auto min-h-screen pb-40">
+                <div className="max-w-md mx-auto min-h-screen pb-40 relative">
                     
                     {/* Header */}
-                    <header className="bg-slate-900 text-white p-6 rounded-b-[3rem] shadow-2xl border-b border-slate-800 sticky top-0 z-40">
-                        <div className="flex justify-between items-center mb-6">
+                    <header className="bg-slate-950 text-white p-7 rounded-b-[3.5rem] shadow-2xl border-b border-slate-900 sticky top-0 z-40">
+                        <div className="flex justify-between items-center mb-8">
                             <div>
-                                <h1 className="text-2xl font-black gold-text tracking-tighter">VOLLEYBALL PRO</h1>
-                                <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase">Office Ledger V5.1</p>
+                                <h1 className="text-2xl font-black gold-text tracking-tighter">VBALL PRO</h1>
+                                <p className="text-slate-500 text-[9px] font-bold tracking-[0.2em] uppercase">Office Edition V5.2</p>
                             </div>
-                            <div className="bg-slate-800 p-2.5 rounded-2xl border border-slate-700 active:scale-95 transition-transform" onClick={() => setActiveTab('profiles')}>
+                            <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-lg active:scale-95 transition-transform" onClick={() => setActiveTab('profiles')}>
                                 <Icon name="users" size={20} className="gold-text" />
                             </div>
                         </div>
 
                         {activeTab === 'daily' && (
-                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                                {Array.from({length: 7}).map((_, i) => {
-                                    const d = new Date(); d.setDate(d.getDate() - (6-i));
+                            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+                                {Array.from({length: 10}).map((_, i) => {
+                                    const d = new Date(); d.setDate(d.getDate() - (9-i));
                                     const iso = d.toISOString().slice(0, 10);
                                     const isSelected = selectedDate === iso;
                                     return (
-                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`flex flex-col items-center justify-center min-w-[3.5rem] h-16 rounded-2xl transition-all ${isSelected ? 'gold-gradient text-white shadow-lg' : 'bg-slate-800 text-slate-500'}`}>
+                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`flex flex-col items-center justify-center min-w-[3.8rem] h-20 rounded-3xl transition-all ${isSelected ? 'gold-gradient text-white shadow-xl scale-110' : 'bg-slate-900 text-slate-500'}`}>
                                             <span className="text-[10px] font-bold opacity-60 mb-1">{['日','一','二','三','四','五','六'][d.getDay()]}</span>
-                                            <span className="text-lg font-black">{d.getDate()}</span>
+                                            <span className="text-xl font-black">{d.getDate()}</span>
                                         </button>
                                     );
                                 }).reverse()}
@@ -186,23 +216,27 @@
                         )}
                     </header>
 
-                    <main className="px-6 py-8">
-                        {/* 今日收支 */}
+                    <main className="px-7 py-8">
+                        {/* TAB 1: 今日收支 */}
                         {activeTab === 'daily' && (
-                            <div className="space-y-8 animate-fade">
-                                <h2 className="text-xl font-black gold-text">今日結算清單</h2>
+                            <div className="space-y-8 animate-up">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-xl font-black gold-text">今日結算清單</h2>
+                                    <div className="bg-slate-900 text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-bold border border-slate-800 tracking-wider">{selectedDate}</div>
+                                </div>
+                                
                                 {dailyData.summary.length > 0 ? (
-                                    <div className="dark-card rounded-[2.5rem] p-6 shadow-2xl">
-                                        <div className="space-y-5">
+                                    <div className="card-dark rounded-[2.5rem] p-7 shadow-2xl">
+                                        <div className="space-y-6">
                                             {dailyData.summary.map(p => (
-                                                <div key={p.id} className="flex justify-between items-center">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-700 bg-slate-800">
-                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <Icon name="users" className="m-2.5 text-slate-600" size={20} />}
+                                                <div key={p.id} className="flex justify-between items-center group">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 shadow-inner">
+                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon name="users" size={20} className="text-slate-700" /></div>}
                                                         </div>
-                                                        <span className="font-bold">{p.name}</span>
+                                                        <span className="font-bold text-slate-200">{p.name}</span>
                                                     </div>
-                                                    <span className={`text-lg font-black font-mono ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
+                                                    <span className={`text-xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
                                                         {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
                                                     </span>
                                                 </div>
@@ -210,32 +244,35 @@
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center py-20 text-slate-600 font-bold border-2 border-dashed border-slate-800 rounded-[2.5rem]">今天暫無記錄</div>
+                                    <div className="text-center py-24 text-slate-700 font-bold border-2 border-dashed border-slate-900 rounded-[3rem]">當日暫無對戰記錄 🏐</div>
                                 )}
                             </div>
                         )}
 
-                        {/* 龍虎榜 */}
+                        {/* TAB 2: 月榜 */}
                         {activeTab === 'monthly' && (
-                            <div className="space-y-6 animate-fade">
+                            <div className="space-y-8 animate-up">
                                 <div className="flex justify-between items-center">
-                                    <h2 className="text-xl font-black gold-text">每月龍虎榜</h2>
-                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-800 border-none rounded-full px-3 py-1 text-[10px] font-bold gold-text" />
+                                    <h2 className="text-xl font-black gold-text tracking-tight">每月龍虎排行榜</h2>
+                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-900 border-none rounded-xl px-4 py-2 text-[10px] font-black gold-text shadow-lg" />
                                 </div>
                                 {monthlyData.map((p, i) => {
                                     const title = getTitle(p, i, monthlyData.length);
                                     return (
-                                        <div key={p.id} className={`dark-card p-5 rounded-[2rem] flex items-center justify-between transition-all ${i === 0 ? 'border-amber-500 scale-105' : ''}`}>
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-700">
-                                                    {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <Icon name="users" className="m-3 text-slate-700" size={24}/>}
+                                        <div key={p.id} className={`card-dark p-6 rounded-[2.5rem] flex items-center justify-between transition-all ${i === 0 ? 'border-amber-500 shadow-amber-500/5 scale-105' : ''}`}>
+                                            <div className="flex items-center gap-5">
+                                                <div className="relative">
+                                                    <div className={`w-14 h-14 rounded-full overflow-hidden border-2 bg-slate-900 ${i === 0 ? 'border-amber-400 shadow-lg shadow-amber-500/20' : 'border-slate-800'}`}>
+                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon name="users" size={24} className="text-slate-800"/></div>}
+                                                    </div>
+                                                    <div className="absolute -top-1 -right-1 bg-slate-950 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border border-slate-800 shadow-md">{i + 1}</div>
                                                 </div>
                                                 <div>
-                                                    <div className="font-bold text-lg leading-none mb-1">{p.name}</div>
-                                                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${title.c}`}>{title.t}</span>
+                                                    <div className="font-black text-slate-100 text-lg leading-none mb-2">{p.name}</div>
+                                                    <span className={`text-[9px] font-black px-3 py-1 rounded-full shadow-md ${title.c}`}>{title.t}</span>
                                                 </div>
                                             </div>
-                                            <div className={`text-2xl font-black font-mono ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
+                                            <div className={`text-2xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>
                                                 {p.net > 0 ? `+${p.net.toFixed(0)}` : p.net.toFixed(0)}
                                             </div>
                                         </div>
@@ -244,59 +281,73 @@
                             </div>
                         )}
 
-                        {/* 記數 */}
+                        {/* TAB 3: 記數 */}
                         {activeTab === 'game' && (
-                            <div className="space-y-8 animate-fade">
-                                <h2 className="text-center font-black gold-text text-xl">NEW GAME 🏐</h2>
-                                <div className="flex gap-2 bg-slate-800 p-2 rounded-2xl border border-slate-700">
+                            <div className="space-y-8 animate-up">
+                                <h2 className="text-center font-black gold-text text-2xl tracking-tight">結算新局</h2>
+                                <div className="flex gap-3 bg-slate-900 p-2.5 rounded-3xl border border-slate-800 shadow-2xl">
                                     {[10, 20, 30].map(r => (
-                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-3 rounded-xl font-black transition-all ${baseRate === r ? 'gold-gradient text-white shadow-lg' : 'text-slate-500'}`}>${r}</button>
+                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-4 rounded-2xl font-black text-xl transition-all ${baseRate === r ? 'gold-gradient text-white shadow-xl scale-105' : 'text-slate-600'}`}>${r}</button>
                                     ))}
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-3">
-                                        <p className="text-center text-[10px] font-black text-green-400 uppercase tracking-widest">Winners</p>
+                                <div className="grid grid-cols-2 gap-5">
+                                    <div className="space-y-4">
+                                        <div className="text-center py-2.5 bg-green-500/5 rounded-full text-[10px] font-black text-green-400 uppercase tracking-widest border border-green-500/20">Winners</div>
                                         {users.map(u => (
-                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-bold border transition-all ${winners.includes(u.id) ? 'bg-green-500/20 text-green-400 border-green-500' : 'bg-slate-800 text-slate-500 border-slate-700'} ${losers.includes(u.id) ? 'opacity-20' : ''}`}>{u.name}</button>
+                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-bold border-2 transition-all active:scale-95 ${winners.includes(u.id) ? 'bg-green-500 text-white border-green-600 shadow-lg shadow-green-500/20' : 'bg-slate-900 text-slate-600 border-slate-800'} ${losers.includes(u.id) ? 'opacity-10 grayscale' : ''}`}>{u.name}</button>
                                         ))}
                                     </div>
-                                    <div className="space-y-3">
-                                        <p className="text-center text-[10px] font-black text-rose-400 uppercase tracking-widest">Losers</p>
+                                    <div className="space-y-4">
+                                        <div className="text-center py-2.5 bg-rose-500/5 rounded-full text-[10px] font-black text-rose-400 uppercase tracking-widest border border-rose-500/20">Losers</div>
                                         {users.map(u => (
-                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-bold border transition-all ${losers.includes(u.id) ? 'bg-rose-500/20 text-rose-400 border-rose-500' : 'bg-slate-800 text-slate-500 border-slate-700'} ${winners.includes(u.id) ? 'opacity-20' : ''}`}>{u.name}</button>
+                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-bold border-2 transition-all active:scale-95 ${losers.includes(u.id) ? 'bg-rose-500 text-white border-rose-600 shadow-lg shadow-rose-500/20' : 'bg-slate-900 text-slate-600 border-slate-800'} ${winners.includes(u.id) ? 'opacity-10 grayscale' : ''}`}>{u.name}</button>
                                         ))}
                                     </div>
                                 </div>
-                                <button onClick={handleSubmitGame} className="w-full gold-gradient text-white py-5 rounded-[2rem] font-black text-lg shadow-2xl active:scale-95 transition-all">完成記錄</button>
+                                <button onClick={handleSubmitGame} className="w-full gold-gradient text-white py-6 rounded-[2.5rem] font-black text-xl shadow-2xl active:scale-95 transition-all mt-6 border-b-4 border-amber-800">儲存戰績</button>
                             </div>
                         )}
 
-                        {/* 隊員 */}
+                        {/* TAB 4: 隊員 */}
                         {activeTab === 'profiles' && (
-                            <div className="space-y-8 animate-fade">
-                                <div className="dark-card p-6 rounded-[2.5rem] flex flex-col items-center gap-6">
-                                    <div onClick={() => fileRef.current.click()} className="w-24 h-24 bg-slate-800 rounded-[2rem] flex items-center justify-center border-2 border-dashed border-slate-700 cursor-pointer overflow-hidden">
-                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-600" size={32} />}
+                            <div className="space-y-8 animate-up">
+                                <h2 className="text-xl font-black gold-text">隊員管理</h2>
+                                <div className="card-dark p-8 rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl border-white/5">
+                                    <div onClick={() => fileRef.current.click()} className="w-28 h-28 bg-slate-900 rounded-[2.5rem] flex items-center justify-center border-4 border-dashed border-slate-800 cursor-pointer overflow-hidden relative group hover:border-amber-500 transition-colors">
+                                        {newPhoto ? <img src={newPhoto} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-700 group-hover:text-amber-500 transition-colors" size={32} />}
                                     </div>
-                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => { if(e.target.files[0]) setPhoto(await resize(e.target.files[0])); }} />
-                                    <div className="w-full space-y-3">
-                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-800 p-3 rounded-xl text-center font-bold text-white border-none" placeholder="輸入名號" />
-                                        <button onClick={async () => {
-                                            if(!newName.trim()) return;
-                                            await db.collection('artifacts').doc(APP_ID).collection('users').add({ name: newName, photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                                            setNewName(''); setPhoto(null);
-                                        }} className="w-full gold-gradient text-white py-3 rounded-xl font-black">加入名單</button>
+                                    <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async (e) => {
+                                        if(e.target.files[0]) {
+                                            const p = await resize(e.target.files[0]);
+                                            setNewPhoto(p);
+                                        }
+                                    }} />
+                                    <div className="w-full space-y-4">
+                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-950 p-4 rounded-2xl text-center font-bold text-lg border-none text-white focus:ring-2 focus:ring-amber-500" placeholder="同事大名" />
+                                        <button 
+                                            onClick={handleAddUser} 
+                                            disabled={actionLoading}
+                                            className={`w-full gold-gradient text-white py-4 rounded-2xl font-black text-lg shadow-xl ${actionLoading ? 'opacity-50 animate-pulse' : ''}`}
+                                        >
+                                            {actionLoading ? '處理中...' : '加入名單'}
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {users.map(u => (
-                                        <div key={u.id} onClick={() => setEditingUser(u)} className="dark-card p-4 rounded-2xl flex items-center gap-3 active:bg-slate-800 transition-colors">
-                                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
-                                                {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <Icon name="users" className="m-2.5 text-slate-700" size={20}/>}
+
+                                <div className="space-y-4">
+                                    <p className="text-[10px] font-black text-slate-600 px-3 uppercase tracking-widest">點擊頭像換相 ({users.length} 人)</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {users.map(u => (
+                                            <div key={u.id} 
+                                                onClick={() => setEditingUser(u)}
+                                                className="bg-slate-900/50 p-4 rounded-[2rem] border border-slate-800/50 flex items-center gap-4 active:bg-slate-800 transition-colors">
+                                                <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-slate-800 shadow-inner">
+                                                    {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon name="users" size={18} className="text-slate-800"/></div>}
+                                                </div>
+                                                <div className="font-bold text-slate-300 text-sm truncate">{u.name}</div>
                                             </div>
-                                            <span className="font-bold text-sm truncate">{u.name}</span>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -304,30 +355,33 @@
 
                     {/* Bottom Navbar */}
                     <div className="fixed bottom-10 left-10 right-10 z-50">
-                        <nav className="glass p-2 rounded-full border border-slate-700/50 shadow-2xl flex justify-around items-center">
-                            <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all ${activeTab==='daily' ? 'gold-gradient text-white shadow-lg' : 'text-slate-600'}`}><Icon name="calendar"/></button>
-                            <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all ${activeTab==='monthly' ? 'gold-gradient text-white shadow-lg' : 'text-slate-600'}`}><Icon name="trophy"/></button>
-                            <button onClick={()=>setActiveTab('game')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${activeTab==='game' ? 'bg-white text-slate-900 shadow-xl' : 'gold-gradient text-white'}`}><Icon name="plus" size={28}/></button>
-                            <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all ${activeTab==='profiles' ? 'gold-gradient text-white shadow-lg' : 'text-slate-600'}`}><Icon name="users"/></button>
+                        <nav className="glass-dark p-3 rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6)] flex justify-around items-center border border-white/10">
+                            <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='daily' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="calendar" size={20}/></button>
+                            <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='monthly' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
+                            
+                            <div className="relative -top-2">
+                                <button onClick={()=>setActiveTab('game')} className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center transition-all shadow-2xl active:scale-90 ${activeTab==='game' ? 'bg-white text-slate-950 rotate-45' : 'gold-gradient text-white shadow-amber-500/20'}`}>
+                                    <Icon name="plus" size={30} className={activeTab==='game' ? '-rotate-45' : ''}/>
+                                </button>
+                            </div>
+
+                            <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all duration-300 ${activeTab==='profiles' ? 'gold-gradient text-white shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="users" size={20}/></button>
                         </nav>
                     </div>
 
-                    {/* 更新頭像 Modal */}
+                    {/* 更新相片 Modal */}
                     {editingUser && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-                            <div className="bg-slate-900 w-full max-w-xs rounded-[3rem] p-8 border border-slate-800 text-center animate-fade">
-                                <h3 className="text-xl font-black gold-text mb-6">更換 {editingUser.name} 的頭像</h3>
-                                <div onClick={() => editFileRef.current.click()} className="w-32 h-32 mx-auto gold-gradient rounded-[2.5rem] flex items-center justify-center border-4 border-slate-900 shadow-2xl cursor-pointer overflow-hidden mb-8">
-                                    {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-white" size={32} />}
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-black/90 backdrop-blur-md">
+                            <div className="bg-slate-900 w-full max-w-xs rounded-[3.5rem] p-10 border border-slate-800 text-center animate-up shadow-2xl">
+                                <h3 className="text-xl font-black gold-text mb-8">更換 {editingUser.name} 的形象</h3>
+                                <div onClick={() => editFileRef.current.click()} className="w-36 h-36 mx-auto gold-gradient rounded-[3rem] flex items-center justify-center border-4 border-slate-950 shadow-2xl cursor-pointer overflow-hidden mb-8 group">
+                                    {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-white" size={40} />}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                        <Icon name="camera" className="text-white" size={32} />
+                                    </div>
                                 </div>
-                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async (e) => {
-                                    if(e.target.files[0]) {
-                                        const p = await resize(e.target.files[0]);
-                                        await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: p });
-                                        setEditingUser(null);
-                                    }
-                                }} />
-                                <button onClick={() => setEditingUser(null)} className="text-slate-500 font-bold hover:text-white transition-colors">取消返回</button>
+                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={(e) => e.target.files[0] && handleUpdatePhoto(e.target.files[0])} />
+                                <button onClick={() => setEditingUser(null)} className="text-slate-500 font-bold hover:text-white transition-colors uppercase text-xs tracking-widest">取消返回</button>
                             </div>
                         </div>
                     )}
