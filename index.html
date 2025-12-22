@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>排球龍虎榜 3.0</title>
+    <title>排球龍虎榜 4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -12,12 +12,17 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans HK', sans-serif; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .date-card.active { background: white; color: #2563eb; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .tab-active { color: #2563eb; position: relative; }
+        .tab-active::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 20px; height: 4px; background: #2563eb; border-radius: 2px; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
-<body class="bg-slate-50">
+<body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -33,38 +38,36 @@
             appId: "1:354145606988:web:fb37bb075f7775de1603e9"
         };
 
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const APP_ID = 'vball-v3-final';
+        const APP_ID = 'vball-v4-prod';
 
-        // --- 簡易 Icon 組件 (SVG) ---
-        const Icon = ({ name, size = 20 }) => {
+        // --- SVG Icons ---
+        const Icon = ({ name, size = 24, className = "" }) => {
             const icons = {
                 trophy: <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M6 20h12M12 22V18m0-14v14M8 4h8a4 4 0 0 1 4 4v2a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z"/>,
                 plus: <path d="M12 5v14M5 12h14"/>,
                 users: <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8m13 14v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>,
-                history: <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0-4v4h4"/>,
+                calendar: <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/>,
+                chart: <path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/>,
                 camera: <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>,
                 trash: <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
             };
             return (
-                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
                     {icons[name]}
                 </svg>
             );
         };
 
         function App() {
-            const [activeTab, setActiveTab] = useState('dashboard');
+            const [activeTab, setActiveTab] = useState('daily'); // daily, monthly, game, profiles
             const [users, setUsers] = useState([]);
             const [matches, setMatches] = useState([]);
             const [loading, setLoading] = useState(true);
             const [user, setUser] = useState(null);
 
-            // 日期處理
             const getToday = () => {
                 const d = new Date();
                 return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -79,10 +82,10 @@
             const [photo, setPhoto] = useState(null);
             const fileRef = useRef(null);
 
-            // 生成最近 7 日日期
+            // 生成 14 日日曆
             const dateStrip = useMemo(() => {
                 const dates = [];
-                for (let i = -6; i <= 0; i++) {
+                for (let i = -13; i <= 0; i++) {
                     const d = new Date();
                     d.setDate(d.getDate() + i);
                     dates.push({
@@ -91,11 +94,11 @@
                         weekday: ['日', '一', '二', '三', '四', '五', '六'][d.getDay()]
                     });
                 }
-                return dates;
+                return dates.reverse();
             }, []);
 
             useEffect(() => {
-                auth.signInAnonymously().catch(e => console.error(e));
+                auth.signInAnonymously();
                 auth.onAuthStateChanged(u => setUser(u));
             }, []);
 
@@ -116,199 +119,276 @@
                 return () => { uUnsub(); mUnsub(); };
             }, [user]);
 
-            const stats = useMemo(() => {
+            // --- 核心邏輯: 計算數據 ---
+            const getStats = (matchList) => {
                 const s = {};
                 users.forEach(u => s[u.id] = { ...u, net: 0, w: 0, l: 0, g: 0 });
-                matches.forEach(m => {
-                    if (m.createdAt.toISOString().slice(0, 7) !== selectedMonth) return;
+                matchList.forEach(m => {
                     const pot = (m.baseRate || 0) * (m.losers?.length || 0);
                     const share = m.winners?.length ? pot / m.winners.length : 0;
                     m.winners?.forEach(id => { if(s[id]) { s[id].net += share; s[id].w++; s[id].g++; } });
                     m.losers?.forEach(id => { if(s[id]) { s[id].net -= (m.baseRate || 0); s[id].l++; s[id].g++; } });
                 });
                 return Object.values(s).filter(p => p.g > 0).sort((a,b) => b.net - a.net);
-            }, [users, matches, selectedMonth]);
+            };
 
-            const filteredMatches = matches.filter(m => {
-                const d = m.createdAt instanceof Date ? m.createdAt : new Date();
-                const mDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                return mDate === selectedDate;
-            });
+            const dailyStats = useMemo(() => {
+                const dailyMatches = matches.filter(m => {
+                    const d = m.createdAt;
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === selectedDate;
+                });
+                return { list: dailyMatches, players: getStats(dailyMatches) };
+            }, [matches, selectedDate, users]);
+
+            const monthlyStats = useMemo(() => {
+                const monthlyMatches = matches.filter(m => m.createdAt.toISOString().slice(0, 7) === selectedMonth);
+                return getStats(monthlyMatches);
+            }, [matches, selectedMonth, users]);
+
+            // --- 搞笑稱號系統 ---
+            const getFunnyTitle = (p, rank, total) => {
+                if (rank === 0 && p.net > 0) return { t: "👑 排球之神", c: "bg-yellow-400 text-yellow-900" };
+                if (rank === 1 && p.net > 0) return { t: "🥈 波場二把手", c: "bg-slate-300 text-slate-800" };
+                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善排球王", c: "bg-red-500 text-white" };
+                if (rank === total - 2 && p.net < 0) return { t: "🏧 流動提款機", c: "bg-orange-400 text-white" };
+                if (p.w >= 5) return { t: "🔥 勝場收割機", c: "bg-orange-100 text-orange-700" };
+                return { t: "🏐 潛力股", c: "bg-blue-100 text-blue-700" };
+            };
 
             const handleAddUser = async () => {
                 if (!newName.trim()) return;
                 await db.collection('artifacts').doc(APP_ID).collection('users').add({
-                    name: newName, photo, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    name: newUserName, photo, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 setNewName(''); setPhoto(null);
             };
 
-            const handleSubmit = async () => {
-                if (!winners.length || !losers.length) return alert("揀人呀！贏家輸家都要揀。");
-                try {
-                    await db.collection('artifacts').doc(APP_ID).collection('matches').add({
-                        baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    setWinners([]); setLosers([]); setActiveTab('dashboard');
-                } catch(e) { alert("Error: " + e.message); }
+            const handleSubmitGame = async () => {
+                if (!winners.length || !losers.length) return alert("要揀贏家同輸家先得！");
+                await db.collection('artifacts').doc(APP_ID).collection('matches').add({
+                    baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                setWinners([]); setLosers([]); setActiveTab('daily');
             };
 
             const onFileChange = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = (ev) => {
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 200;
-                        const scale = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scale;
+                        const MAX_W = 200;
+                        const scale = MAX_W / img.width;
+                        canvas.width = MAX_W; canvas.height = img.height * scale;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         setPhoto(canvas.toDataURL('image/jpeg', 0.6));
                     };
-                    img.src = event.target.result;
+                    img.src = ev.target.result;
                 };
                 reader.readAsDataURL(file);
             };
 
-            if (loading) return <div className="h-screen flex items-center justify-center text-blue-600 font-bold bg-white">🏐 正在進入球場...</div>;
+            if (loading) return <div className="h-screen flex items-center justify-center text-blue-600 font-black text-xl animate-pulse">🏐 球場清場中...</div>;
 
             return (
-                <div className="max-w-md mx-auto min-h-screen bg-slate-50 pb-24 shadow-xl">
-                    {/* Header + Calendar */}
-                    <header className="bg-blue-600 text-white rounded-b-[2rem] shadow-lg sticky top-0 z-20">
-                        <div className="p-5 flex justify-between items-center">
-                            <h1 className="text-xl font-black flex items-center gap-2">排球數簿 <span className="bg-blue-500 text-[10px] px-2 py-0.5 rounded-full">PRO</span></h1>
-                            <div className="text-xs opacity-70">{selectedDate === getToday() ? '今日戰報' : selectedDate}</div>
+                <div className="max-w-md mx-auto min-h-screen bg-slate-50 pb-32">
+                    
+                    {/* Header */}
+                    <header className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 rounded-b-[2.5rem] shadow-xl sticky top-0 z-30">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h1 className="text-2xl font-black tracking-tight">排球數簿</h1>
+                                <p className="text-blue-100 text-[10px] font-bold opacity-80 uppercase tracking-widest">Office Volleyball Ledger</p>
+                            </div>
+                            <div className="bg-white/20 p-2 rounded-2xl backdrop-blur-md" onClick={() => setActiveTab('profiles')}>
+                                <Icon name="users" size={20} />
+                            </div>
                         </div>
-                        
-                        {/* 日曆橫條 */}
-                        <div className="flex overflow-x-auto px-4 pb-4 gap-3 no-scrollbar snap-x">
-                            {dateStrip.map(d => (
-                                <button key={d.full} onClick={() => { setSelectedDate(d.full); setActiveTab('dashboard'); }} className={`snap-center flex flex-col items-center justify-center min-w-[3.5rem] h-16 rounded-2xl transition-all ${selectedDate === d.full ? 'bg-white text-blue-600 shadow-lg scale-105' : 'bg-blue-700/50 text-blue-100'}`}>
-                                    <span className="text-[10px] font-bold opacity-70">{d.weekday}</span>
-                                    <span className="text-lg font-black">{d.day}</span>
-                                </button>
-                            ))}
-                        </div>
+
+                        {/* 日曆橫條 - 只在每日記錄顯示 */}
+                        {activeTab === 'daily' && (
+                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 snap-x">
+                                {dateStrip.map(d => (
+                                    <button 
+                                        key={d.full} 
+                                        onClick={() => setSelectedDate(d.full)}
+                                        className={`snap-center flex flex-col items-center justify-center min-w-[3.5rem] h-20 rounded-3xl transition-all ${selectedDate === d.full ? 'bg-white text-blue-600 shadow-lg scale-110' : 'bg-blue-500/30 text-blue-100 opacity-60'}`}
+                                    >
+                                        <span className="text-[10px] font-black mb-1">{d.weekday}</span>
+                                        <span className="text-xl font-black">{d.day}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </header>
 
-                    <main className="p-4">
-                        {/* 龍虎榜 */}
-                        {activeTab === 'dashboard' && (
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center px-1">
-                                    <h2 className="font-black text-slate-800 tracking-tight">
-                                        {selectedDate === getToday() ? '今日數據' : `${selectedDate} 記錄`}
-                                    </h2>
-                                    {selectedDate === getToday() && (
-                                        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="text-xs bg-white border-none rounded-full px-3 py-1 font-bold text-blue-600 shadow-sm" />
-                                    )}
+                    <main className="px-5 py-6">
+                        
+                        {/* --- TAB 1: 每日記錄 (收錢用) --- */}
+                        {activeTab === 'daily' && (
+                            <div className="space-y-6 animate-pop">
+                                <div className="flex justify-between items-end">
+                                    <h2 className="text-xl font-black text-slate-800 tracking-tight">當日結算</h2>
+                                    <div className="text-xs font-bold text-slate-400">{selectedDate}</div>
                                 </div>
 
-                                {filteredMatches.length === 0 ? (
-                                    <div className="bg-white p-10 rounded-3xl text-center text-slate-300 font-bold border-2 border-dashed border-slate-100">這天暫無戰績 😴</div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {filteredMatches.map(m => (
-                                            <div key={m.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-bold text-slate-400">${m.baseRate} 場</span>
-                                                    <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-200 hover:text-red-500 transition-colors"><Icon name="trash" size={14}/></button>
+                                {/* 今日收錢概覽 */}
+                                {dailyStats.players.length > 0 && (
+                                    <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">今日淨贏輸 (收錢參考)</p>
+                                        <div className="space-y-4">
+                                            {dailyStats.players.map(p => (
+                                                <div key={p.id} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100">
+                                                            {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><Icon name="users" size={14}/></div>}
+                                                        </div>
+                                                        <span className="font-bold text-slate-700">{p.name}</span>
+                                                    </div>
+                                                    <div className={`font-black font-mono ${p.net >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                        {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `比 $${Math.abs(p.net).toFixed(0)}`}
+                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="text-xs"><span className="text-green-600 font-bold block mb-1">贏家:</span> {m.winners.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
-                                                    <div className="text-xs"><span className="text-red-500 font-bold block mb-1">輸家:</span> {m.losers.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* 月份排名 (只在顯示今日時出現) */}
-                                {selectedDate === getToday() && (
-                                    <div className="mt-8 space-y-3">
-                                        <h2 className="font-black text-slate-800 px-1">{selectedMonth.slice(5)}月總榜單 🏆</h2>
-                                        {stats.map((p, i) => (
-                                            <div key={p.id} className={`bg-white p-4 rounded-3xl shadow-sm flex items-center justify-between border-2 ${i === 0 ? 'border-yellow-200' : 'border-white'}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 border-2 border-white shadow-sm">
-                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><Icon name="users" size={24}/></div>}
+                                {/* 每場詳細記錄 */}
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">比賽細節</p>
+                                    {dailyStats.list.length === 0 ? (
+                                        <div className="bg-white p-12 rounded-[2rem] text-center text-slate-300 font-bold border-2 border-dashed border-slate-100">當日無記錄</div>
+                                    ) : (
+                                        dailyStats.list.map((m, idx) => (
+                                            <div key={m.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+                                                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500/20"></div>
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-3 py-1 rounded-full">Game {dailyStats.list.length - idx} • ${m.baseRate}場</span>
+                                                    <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-200 hover:text-red-500 transition-colors"><Icon name="trash" size={16}/></button>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <span className="text-[10px] font-black text-green-500 uppercase block mb-2">Winners 贏</span>
+                                                        <div className="text-xs font-bold text-slate-600 leading-relaxed">{m.winners.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
                                                     </div>
                                                     <div>
-                                                        <div className="font-bold text-slate-800">{p.name}</div>
-                                                        <div className="text-[10px] text-slate-400 font-bold">{p.w}勝 {p.l}負</div>
+                                                        <span className="text-[10px] font-black text-red-500 uppercase block mb-2">Losers 輸</span>
+                                                        <div className="text-xs font-bold text-slate-600 leading-relaxed">{m.losers.map(id => users.find(u=>u.id===id)?.name).join(', ')}</div>
                                                     </div>
                                                 </div>
-                                                <div className={`text-xl font-black font-mono ${p.net >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                    {p.net > 0 && '+'}{p.net.toFixed(0)}
-                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         )}
 
-                        {/* 記數頁 */}
+                        {/* --- TAB 2: 每月龍虎榜 (月結用) --- */}
+                        {activeTab === 'monthly' && (
+                            <div className="space-y-6 animate-pop">
+                                <div className="flex justify-between items-center px-1">
+                                    <h2 className="text-xl font-black text-slate-800 tracking-tight">每月龍虎榜</h2>
+                                    <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white shadow-sm border-none rounded-full px-4 py-2 font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 text-sm" />
+                                </div>
+
+                                <div className="space-y-4">
+                                    {monthlyStats.length === 0 ? (
+                                        <div className="bg-white p-16 rounded-[2.5rem] text-center text-slate-300 font-bold border-2 border-dashed border-slate-100">本月無戰績</div>
+                                    ) : (
+                                        monthlyStats.map((p, i) => {
+                                            const title = getFunnyTitle(p, i, monthlyStats.length);
+                                            return (
+                                                <div key={p.id} className={`bg-white p-5 rounded-[2rem] shadow-sm flex items-center justify-between border-2 transition-all ${i === 0 ? 'border-yellow-200 scale-105' : 'border-white'}`}>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="relative">
+                                                            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md bg-slate-50">
+                                                                {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><Icon name="users" /></div>}
+                                                            </div>
+                                                            <div className="absolute -top-1 -left-1 bg-slate-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white shadow-sm">{i + 1}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex flex-col">
+                                                                <span className="font-black text-slate-800 text-lg">{p.name}</span>
+                                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black mt-1 inline-block w-fit ${title.c}`}>{title.t}</span>
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-400 font-bold mt-1 tracking-wider">{p.w}勝 {p.l}負 • {p.g}場</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`text-2xl font-black font-mono tracking-tighter ${p.net >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                        {p.net > 0 && '+'}{p.net.toFixed(0)}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- TAB 3: 新增戰績 --- */}
                         {activeTab === 'game' && (
-                            <div className="space-y-6">
-                                <h2 className="text-center font-black text-slate-800 text-lg">新一局結算</h2>
-                                <div className="bg-white p-2 rounded-2xl shadow-sm flex gap-2 border border-slate-100">
+                            <div className="space-y-6 animate-pop">
+                                <h2 className="text-center font-black text-slate-800 text-xl tracking-tight">記錄新一局 🏐</h2>
+                                
+                                <div className="bg-white p-3 rounded-[2rem] shadow-sm flex gap-2 border border-slate-100">
                                     {[10, 20, 30].map(r => (
-                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-3 rounded-xl font-black text-lg transition-all ${baseRate === r ? 'bg-blue-600 text-white shadow-md scale-105' : 'text-slate-400'}`}>${r}</button>
+                                        <button key={r} onClick={() => setBaseRate(r)} className={`flex-1 py-4 rounded-2xl font-black text-xl transition-all ${baseRate === r ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>${r}</button>
                                     ))}
                                 </div>
+
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         <p className="text-center text-[10px] font-black text-green-600 uppercase tracking-widest">贏家 ({winners.length})</p>
                                         <div className="space-y-2">
                                             {users.map(u => (
-                                                <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-3 rounded-2xl text-sm font-black border-2 transition-all ${winners.includes(u.id) ? 'bg-green-500 text-white border-green-600 shadow-md transform scale-105' : 'bg-white text-slate-400 border-slate-100'} ${losers.includes(u.id) ? 'opacity-10' : ''}`}>
+                                                <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-black border-2 transition-all ${winners.includes(u.id) ? 'bg-green-500 text-white border-green-600 shadow-md transform scale-105' : 'bg-white text-slate-500 border-slate-100'} ${losers.includes(u.id) ? 'opacity-10' : ''}`}>
                                                     {u.name}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         <p className="text-center text-[10px] font-black text-red-600 uppercase tracking-widest">輸家 ({losers.length})</p>
                                         <div className="space-y-2">
                                             {users.map(u => (
-                                                <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-3 rounded-2xl text-sm font-black border-2 transition-all ${losers.includes(u.id) ? 'bg-red-500 text-white border-red-600 shadow-md transform scale-105' : 'bg-white text-slate-400 border-slate-100'} ${winners.includes(u.id) ? 'opacity-10' : ''}`}>
+                                                <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(id => id !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 rounded-2xl text-sm font-black border-2 transition-all ${losers.includes(u.id) ? 'bg-red-500 text-white border-red-600 shadow-md transform scale-105' : 'bg-white text-slate-500 border-slate-100'} ${winners.includes(u.id) ? 'opacity-10' : ''}`}>
                                                     {u.name}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
                                 </div>
-                                <button onClick={handleSubmit} className="w-full bg-slate-900 text-white py-4 rounded-3xl font-black text-lg shadow-xl active:scale-95 transition-all">確認結算 (寫入今日)</button>
+                                
+                                <button onClick={handleSubmitGame} className="w-full bg-slate-900 text-white py-5 rounded-[2.5rem] font-black text-xl shadow-2xl active:scale-95 transition-all mt-6 border-b-4 border-black">寫入今日記錄</button>
                             </div>
                         )}
 
-                        {/* 隊員頁 */}
+                        {/* --- TAB 4: 隊員管理 --- */}
                         {activeTab === 'profiles' && (
-                            <div className="space-y-6">
-                                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center gap-4">
-                                    <div onClick={() => fileRef.current.click()} className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center border-4 border-dashed border-slate-100 cursor-pointer overflow-hidden relative">
-                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="text-slate-300" size={24} />}
+                            <div className="space-y-6 animate-pop">
+                                <h2 className="text-xl font-black text-slate-800 tracking-tight">隊員管理</h2>
+                                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center gap-5">
+                                    <div onClick={() => fileRef.current.click()} className="w-24 h-24 bg-slate-50 rounded-[2rem] flex items-center justify-center border-4 border-dashed border-slate-100 cursor-pointer overflow-hidden relative group">
+                                        {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" size={32} className="text-slate-300 group-hover:text-blue-500 transition-colors" />}
                                     </div>
                                     <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={onFileChange} />
                                     <div className="w-full space-y-3">
-                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-50 p-3 rounded-2xl text-center font-bold text-lg border-none" placeholder="輸入同事名" />
-                                        <button onClick={handleAddUser} className="w-full bg-blue-600 text-white py-3 rounded-2xl font-black shadow-lg">加入隊伍</button>
+                                        <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl text-center font-bold text-lg border-none focus:ring-2 focus:ring-blue-500" placeholder="輸入同事名" />
+                                        <button onClick={handleAddUser} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-blue-200">加入隊伍</button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-3 gap-4">
                                     {users.map(u => (
-                                        <div key={u.id} className="bg-white p-3 rounded-3xl border border-slate-100 text-center relative group shadow-sm">
-                                            <div className="w-12 h-12 rounded-full mx-auto mb-2 overflow-hidden bg-slate-50">
-                                                {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><Icon name="users" size={18}/></div>}
+                                        <div key={u.id} className="bg-white p-4 rounded-[2rem] border border-slate-100 text-center relative group shadow-sm">
+                                            <div className="w-14 h-14 rounded-full mx-auto mb-2 overflow-hidden bg-slate-50 border-2 border-white shadow-inner">
+                                                {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><Icon name="users" size={20}/></div>}
                                             </div>
-                                            <p className="text-[11px] font-black text-slate-700 truncate">{u.name}</p>
-                                            <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('users').doc(u.id).delete()} className="absolute top-1 right-1 text-red-100 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={12}/></button>
+                                            <p className="text-xs font-black text-slate-700 truncate">{u.name}</p>
+                                            <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('users').doc(u.id).delete()} className="absolute top-1 right-1 text-red-100 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={14}/></button>
                                         </div>
                                     ))}
                                 </div>
@@ -316,11 +396,18 @@
                         )}
                     </main>
 
-                    {/* 底部導航 */}
-                    <nav className="fixed bottom-6 left-10 right-10 bg-white/90 backdrop-blur-xl p-2 rounded-full shadow-2xl flex justify-around items-center z-30 border border-white">
-                        <button onClick={()=>setActiveTab('dashboard')} className={`p-4 rounded-full transition-all ${activeTab==='dashboard' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300'}`}><Icon name="trophy"/></button>
-                        <button onClick={()=>setActiveTab('game')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-xl ${activeTab==='game' ? 'bg-slate-900 text-white' : 'bg-blue-600 text-white'}`}><Icon name="plus" size={28}/></button>
-                        <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-full transition-all ${activeTab==='profiles' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300'}`}><Icon name="users"/></button>
+                    {/* Bottom Navbar */}
+                    <nav className="fixed bottom-8 left-8 right-8 bg-white/90 backdrop-blur-2xl p-3 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex justify-around items-center z-40 border border-white">
+                        <button onClick={()=>setActiveTab('daily')} className={`p-4 rounded-[1.5rem] transition-all ${activeTab==='daily' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110' : 'text-slate-300'}`}><Icon name="calendar"/></button>
+                        <button onClick={()=>setActiveTab('monthly')} className={`p-4 rounded-[1.5rem] transition-all ${activeTab==='monthly' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110' : 'text-slate-300'}`}><Icon name="trophy"/></button>
+                        
+                        <div className="relative -top-12">
+                            <button onClick={()=>setActiveTab('game')} className={`w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-2xl transition-all active:scale-90 ${activeTab==='game' ? 'bg-slate-900 text-white rotate-45' : 'bg-blue-600 text-white shadow-blue-300'}`}>
+                                <Icon name="plus" size={40} className={activeTab==='game' ? '-rotate-45' : ''}/>
+                            </button>
+                        </div>
+
+                        <button onClick={()=>setActiveTab('profiles')} className={`p-4 rounded-[1.5rem] transition-all ${activeTab==='profiles' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110' : 'text-slate-300'}`}><Icon name="users"/></button>
                     </nav>
                 </div>
             );
