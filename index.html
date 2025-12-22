@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>排球大清算 14.0 會計師版</title>
+    <title>排球慈善基金 V15.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -39,10 +39,13 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         .page-animate { animation: fadeIn 0.3s ease-out forwards; }
 
-        /* 修復 Loading 畫面正中 */
+        /* 確保 Loading 畫面絕對正中 */
         .loading-screen {
             position: fixed; 
-            inset: 0; 
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             background: #000; 
             z-index: 9999;
             display: flex; 
@@ -64,6 +67,12 @@
             background: #FFD700;
             color: #000;
             transform: scale(1.1);
+        }
+        
+        /* 頭像框質感 */
+        .avatar-border {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
     </style>
 </head>
@@ -89,12 +98,12 @@
         const ADMIN_PASSWORD = "8888";
 
         const Phrases = [
-            "正在掃描今日老細...",
+            "正在計算受害者捐款...",
+            "正在點算今日老細名單...",
+            "慈善基金會多謝你的慷慨...",
+            "正在掃描邊個輸到褲穿窿...",
             "會計師正喺度磨刀...",
-            "慈善基金會多謝你...",
-            "正在計算今日你要捐幾多...",
-            "排球黑洞正在熱身...",
-            "正在生成受害者清單..."
+            "排球黑洞正在熱身..."
         ];
 
         const Icon = ({ name, size = 24, className = "" }) => {
@@ -122,11 +131,9 @@
             const [isAdmin, setIsAdmin] = useState(false);
             const [phrase] = useState(Phrases[Math.floor(Math.random() * Phrases.length)]);
 
-            // 日期處理
             const getDayStr = (d) => d.toISOString().slice(0, 10);
             const [selectedDate, setSelectedDate] = useState(getDayStr(new Date()));
             
-            // Form States
             const [newName, setNewName] = useState('');
             const [photo, setPhoto] = useState(null);
             const [baseRate, setBaseRate] = useState(10);
@@ -154,11 +161,7 @@
                 const res = [];
                 for (let i = -9; i <= 0; i++) {
                     const d = new Date(); d.setDate(d.getDate() + i);
-                    res.push({
-                        iso: getDayStr(d),
-                        day: d.getDate(),
-                        wk: ['日','一','二','三','四','五','六'][d.getDay()]
-                    });
+                    res.push({ iso: getDayStr(d), day: d.getDate(), wk: ['日','一','二','三','四','五','六'][d.getDay()] });
                 }
                 return res.reverse();
             }, []);
@@ -212,11 +215,16 @@
 
             if (loading) return (
                 <div className="loading-screen">
-                    <div className="relative">
-                        <div className="w-16 h-16 border-4 border-amber-500/20 rounded-full"></div>
+                    <div className="relative mb-8">
+                        <div className="w-20 h-20 border-4 border-amber-500/20 rounded-full"></div>
                         <div className="absolute inset-0 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <Icon name="trophy" size={30} className="text-amber-500" />
+                        </div>
                     </div>
-                    <p className="mt-8 font-black text-amber-500 tracking-[0.2em] animate-pulse italic text-sm">{phrase}</p>
+                    <h2 className="text-2xl font-black gold-text italic tracking-tighter mb-2">排球慈善基金</h2>
+                    <p className="text-slate-500 text-xs font-bold tracking-[0.3em] uppercase mb-10">Victim Donation Fund</p>
+                    <p className="font-black text-amber-500/80 animate-pulse italic text-sm">{phrase}</p>
                 </div>
             );
 
@@ -227,51 +235,51 @@
                     {/* --- DASHBOARD --- */}
                     {view === 'dashboard' && (
                         <div className="space-y-6 page-animate">
-                            <h1 className="text-3xl font-black italic gold-text tracking-tighter">大清算 DASH</h1>
+                            <div className="px-2">
+                                <h1 className="text-3xl font-black italic gold-text tracking-tighter leading-none">慈善基金 DASH</h1>
+                                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1">水魚捐獻處 • Victim Center</p>
+                            </div>
+                            
                             <div className="bento-card p-8 gold-gradient text-black h-60 flex flex-col justify-between shadow-2xl relative overflow-hidden">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">今日總身家</p>
-                                    <h2 className="text-6xl font-black italic tracking-tighter leading-none">${matches.filter(m => getDayStr(m.createdAt) === getDayStr(new Date())).reduce((a,b) => a + (b.baseRate * b.losers.length), 0)}</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">今日慈善捐獻總額</p>
+                                    <h2 className="text-6xl font-black italic tracking-tighter leading-none">
+                                        ${matches.filter(m => getDayStr(m.createdAt) === getDayStr(new Date())).reduce((a,b) => a + (b.baseRate * b.losers.length), 0)}
+                                    </h2>
                                 </div>
                                 <div className="bg-black/10 self-start px-4 py-2 rounded-2xl backdrop-blur-md">
-                                    <p className="text-[9px] font-black uppercase italic">本月戰神: {monthlyStats[0]?.name || "仲未有人贏"}</p>
+                                    <p className="text-[9px] font-black uppercase italic">本月大慈善家: {monthlyStats[monthlyStats.length-1]?.name || "仲未有人捐"}</p>
                                 </div>
-                                <Icon name="trophy" size={120} className="absolute -right-8 -bottom-8 opacity-10 rotate-12" />
+                                <Icon name="coins" size={120} className="absolute -right-8 -bottom-8 opacity-10 rotate-12" />
                             </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div onClick={() => setView('daily')} className="bento-card p-6 flex flex-col justify-between h-44 active:scale-95 transition-all cursor-pointer">
                                     <Icon name="coins" className="text-amber-500" />
                                     <div>
-                                        <p className="text-[12px] font-black">每日清算</p>
-                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">會計師位</p>
+                                        <p className="text-[12px] font-black italic">今日大清算</p>
+                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">會計埋數位</p>
                                     </div>
                                 </div>
                                 <div onClick={() => setView('monthly')} className="bento-card p-6 flex flex-col justify-between h-44 active:scale-95 transition-all cursor-pointer">
                                     <Icon name="trophy" className="text-amber-500" />
                                     <div>
-                                        <p className="text-[12px] font-black">含冤大榜</p>
-                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">每月總結</p>
+                                        <p className="text-[12px] font-black italic">含冤大榜</p>
+                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">每月大總結</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* --- DAILY (今日清算 + 日曆橫條) --- */}
+                    {/* --- DAILY (日曆橫條 + 會計表) --- */}
                     {view === 'daily' && (
                         <div className="space-y-8 page-animate">
-                            <div className="flex justify-between items-center px-2">
-                                <h2 className="text-3xl font-black italic gold-text tracking-tighter">每日大清算 💸</h2>
-                            </div>
+                            <h2 className="text-3xl font-black italic gold-text tracking-tighter px-2">每日捐獻清單 💸</h2>
 
-                            {/* 日曆橫條 */}
                             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1 snap-x">
                                 {dateStrip.map(d => (
-                                    <button 
-                                        key={d.iso} 
-                                        onClick={() => setSelectedDate(d.iso)}
-                                        className={`snap-center flex flex-col items-center justify-center min-w-[3.6rem] h-20 rounded-3xl transition-all duration-300 ${selectedDate === d.iso ? 'gold-gradient text-black shadow-xl scale-110' : 'bg-white/5 text-slate-500'}`}
-                                    >
+                                    <button key={d.iso} onClick={() => setSelectedDate(d.iso)} className={`snap-center flex flex-col items-center justify-center min-w-[3.6rem] h-20 rounded-3xl transition-all duration-300 ${selectedDate === d.iso ? 'gold-gradient text-black shadow-xl scale-110' : 'bg-white/5 text-slate-500'}`}>
                                         <span className="text-[10px] font-bold opacity-60 mb-1">{d.wk}</span>
                                         <span className="text-xl font-black">{d.day}</span>
                                     </button>
@@ -294,27 +302,27 @@
                                                     <span className="font-black text-slate-100 text-sm truncate w-24">{p.name}</span>
                                                 </div>
                                                 <span className={`text-lg font-black font-mono ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>
-                                                    {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `比 $${Math.abs(p.net).toFixed(0)}`}
+                                                    {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `畀 $${Math.abs(p.net).toFixed(0)}`}
                                                 </span>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-10 opacity-20 font-black italic uppercase text-xs">這天暫無慘案發生</div>
+                                    <div className="text-center py-10 opacity-20 font-black italic uppercase text-xs">這天暫無慈善捐獻</div>
                                 )}
                             </div>
 
                             <div className="space-y-4">
-                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest px-2 italic">逐場大清算記錄</p>
+                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest px-2 italic">打波大清算記錄</p>
                                 {dailyStats.list.map((m, idx) => (
-                                    <div key={m.id} className="bento-card p-5 flex justify-between items-center group overflow-hidden">
+                                    <div key={m.id} className="bento-card p-5 flex justify-between items-center">
                                         <div className="space-y-2">
                                             <span className="text-[9px] font-black bg-white/5 text-amber-500 px-3 py-1 rounded-full uppercase italic tracking-widest">Game {dailyStats.list.length - idx} • ${m.baseRate}</span>
                                             <div className="text-[11px] font-bold">
-                                                <span className="text-green-500 mr-2">贏家:</span> {m.winners.map(id => users.find(u=>u.id===id)?.name || "隱退者").join(', ')}
+                                                <span className="text-green-500 mr-2">收錢大佬:</span> {m.winners.map(id => users.find(u=>u.id===id)?.name || "已登出受害者").join(', ')}
                                             </div>
                                             <div className="text-[11px] font-bold">
-                                                <span className="text-rose-500 mr-2">輸家:</span> {m.losers.map(id => users.find(u=>u.id===id)?.name || "隱退者").join(', ')}
+                                                <span className="text-rose-500 mr-2">慈善大使:</span> {m.losers.map(id => users.find(u=>u.id===id)?.name || "已登出受害者").join(', ')}
                                             </div>
                                         </div>
                                         {isAdmin && <button onClick={() => confirm('Del?') && db.collection('artifacts').doc(APP_ID).collection('matches').doc(m.id).delete()} className="text-slate-800 hover:text-rose-500 p-2"><Icon name="trash" size={16}/></button>}
@@ -327,7 +335,7 @@
                     {/* --- MONTHLY --- */}
                     {view === 'monthly' && (
                         <div className="space-y-8 page-animate">
-                            <h2 className="text-3xl font-black italic gold-text tracking-tighter px-2 text-center underline decoration-amber-500 decoration-4 underline-offset-8">本月含冤大榜 🏆</h2>
+                            <h2 className="text-3xl font-black italic gold-text tracking-tighter px-2 text-center">本月含冤錄 🏆</h2>
                             <div className="space-y-4">
                                 {monthlyStats.map((p, i) => {
                                     const title = getFunnyTitle(p, i, monthlyStats.length);
@@ -335,10 +343,10 @@
                                         <div key={p.id} className={`bento-card p-5 flex items-center justify-between border-2 transition-all duration-500 ${i === 0 ? 'border-amber-500/50 shadow-[0_0_30px_-5px_rgba(255,215,0,0.2)] scale-105' : 'border-white/5'}`}>
                                             <div className="flex items-center gap-4">
                                                 <div className="relative">
-                                                    <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 bg-slate-900 ${i === 0 ? 'border-amber-400' : 'border-white/5'}`}>
+                                                    <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 bg-slate-900 ${i === 0 ? 'border-amber-400 shadow-lg' : 'border-white/5'}`}>
                                                         {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={18}/></div>}
                                                     </div>
-                                                    <div className="absolute -top-1 -right-1 gold-gradient text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-black">{i + 1}</div>
+                                                    <div className="absolute -top-1 -right-1 gold-gradient text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-black shadow-lg">{i + 1}</div>
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="font-black text-slate-100 text-sm truncate italic mb-1 uppercase">{p.name}</p>
@@ -361,9 +369,9 @@
                     {/* --- PROFILES --- */}
                     {view === 'profiles' && (
                         <div className="space-y-8 page-animate">
-                            <h2 className="text-4xl font-black italic gold-text tracking-tighter px-2">受害者名冊 📖</h2>
+                            <h2 className="text-4xl font-black italic gold-text tracking-tighter px-2 leading-none italic">受害者名冊 📖</h2>
                             <div className="bento-card p-10 flex flex-col items-center gap-8 shadow-2xl border-white/10">
-                                <div onClick={() => fileRef.current.click()} className="w-32 h-32 bento-card bg-white/5 rounded-[2.8rem] flex items-center justify-center border-4 border-dashed border-white/10 overflow-hidden relative cursor-pointer active:scale-95 transition-all hover:border-amber-500">
+                                <div onClick={() => fileRef.current.click()} className="w-32 h-32 bento-card bg-white/5 rounded-[2.8rem] flex items-center justify-center border-4 border-dashed border-white/10 overflow-hidden relative cursor-pointer active:scale-95 transition-all hover:border-amber-500 shadow-inner">
                                     {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="opacity-20" size={32} />}
                                     <div className="absolute bottom-2 right-2 bg-amber-500 p-1.5 rounded-full shadow-lg"><Icon name="plus" size={10} className="text-black" /></div>
                                 </div>
@@ -371,7 +379,7 @@
 
                                 <div className="w-full space-y-5">
                                     <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-white/5 border-none p-5 rounded-3xl font-black text-center text-lg focus:ring-2 focus:ring-amber-500/40 text-white shadow-inner" placeholder="受害者尊姓大名" />
-                                    <button onClick={async () => { if(!newName.trim()) return alert("名都無個？"); await db.collection('artifacts').doc(APP_ID).collection('users').add({ name: newName.trim(), photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setNewName(''); setPhoto(null); }} className="w-full gold-gradient py-4 rounded-3xl font-black text-black text-lg shadow-xl active:scale-95 transition-all">正式入冊登基</button>
+                                    <button onClick={async () => { if(!newName.trim()) return alert("名都無個？"); await db.collection('artifacts').doc(APP_ID).collection('users').add({ name: newName.trim(), photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setNewName(''); setPhoto(null); }} className="w-full gold-gradient py-4 rounded-3xl font-black text-black text-lg shadow-xl active:scale-95 transition-all italic">正式登基入冊</button>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4 pb-20">
@@ -381,22 +389,22 @@
                                             <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/5 border border-white/5 shadow-inner shrink-0">
                                                 {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10 bg-white/10"><Icon name="user" size={16}/></div>}
                                             </div>
-                                            <span className="font-black text-xs truncate uppercase tracking-tighter text-slate-300">{u.name}</span>
+                                            <span className="font-black text-xs truncate flex-1 tracking-tighter uppercase text-slate-300">{u.name}</span>
                                         </div>
                                         {isAdmin && <button onClick={() => confirm('踢佢出門口？') && db.collection('artifacts').doc(APP_ID).collection('users').doc(u.id).delete()} className="absolute -top-2 -right-2 bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-4 border-black active:scale-75 transition-all z-10"><Icon name="trash" size={12} /></button>}
                                     </div>
                                 ))}
                             </div>
                             <div className="text-center opacity-10 pb-20">
-                                <button onClick={() => { const p = prompt("請輸入口令:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="text-[10px] font-black uppercase tracking-[0.5em] italic">- Boss Secret Entrance -</button>
+                                <button onClick={() => { const p = prompt("請輸入老細口令:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="text-[10px] font-black uppercase tracking-[0.5em] italic">- Boss Secret Entrance -</button>
                             </div>
                         </div>
                     )}
 
-                    {/* --- GAME (執錢) --- */}
+                    {/* --- GAME (執錢位) --- */}
                     {view === 'game' && (
                         <div className="space-y-10 page-animate">
-                            <h2 className="text-4xl font-black italic gold-text tracking-tighter text-center">執錢入帳 💸</h2>
+                            <h2 className="text-4xl font-black italic gold-text tracking-tighter px-2 text-center leading-none">慈善捐獻錄 💸</h2>
                             <div className="grid grid-cols-3 gap-3">
                                 {[10, 20, 30].map(r => (
                                     <button key={r} onClick={() => setBaseRate(r)} className={`p-7 bento-card font-black text-2xl transition-all ${baseRate === r ? 'gold-gradient text-black scale-105 shadow-xl border-none' : 'text-slate-600'}`}>${r}</button>
@@ -420,7 +428,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={async () => { if(!winners.length || !losers.length) return alert("要揀人呀！"); await db.collection('artifacts').doc(APP_ID).collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setWinners([]); setLosers([]); setView('daily'); }} className="w-full gold-gradient py-6 rounded-3xl font-black text-black text-xl shadow-2xl active:scale-95 italic border-b-8 border-amber-900">確認！送佢哋去執錢</button>
+                            <button onClick={async () => { if(!winners.length || !losers.length) return alert("要揀人呀！"); await db.collection('artifacts').doc(APP_ID).collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setWinners([]); setLosers([]); setView('daily'); }} className="w-full gold-gradient py-6 rounded-3xl font-black text-black text-xl shadow-2xl active:scale-95 italic border-b-8 border-amber-900">入數！由佢哋去捐錢</button>
                         </div>
                     )}
 
@@ -429,10 +437,7 @@
                         <button onClick={() => setView('dashboard')} className={`p-4 rounded-full transition-all duration-300 ${view === 'dashboard' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="home" size={20}/></button>
                         <button onClick={() => setView('daily')} className={`p-4 rounded-full transition-all duration-300 ${view === 'daily' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="coins" size={20}/></button>
                         
-                        <button 
-                            onClick={() => setView('game')} 
-                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${view === 'game' ? 'bg-white text-black rotate-45' : 'gold-gradient text-black shadow-amber-500/20'}`}
-                        >
+                        <button onClick={() => setView('game')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${view === 'game' ? 'bg-white text-black rotate-45' : 'gold-gradient text-black shadow-amber-500/20'}`}>
                             <Icon name="plus" size={26} className={view === 'game' ? '-rotate-45' : ''}/>
                         </button>
 
@@ -444,13 +449,13 @@
                     {editingUser && (
                         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-8 bg-black/95 backdrop-blur-3xl page-animate">
                             <div className="bento-card bg-slate-950 w-full max-w-xs p-12 border border-white/10 text-center shadow-2xl relative">
-                                <h3 className="text-xl font-black gold-text mb-2 italic tracking-tighter">幫受害者易容</h3>
-                                <p className="text-[8px] text-slate-600 font-bold mb-10 tracking-[0.3em] uppercase">Changing Profile Photo</p>
-                                <div onClick={() => editFileRef.current.click()} className="w-48 h-48 mx-auto gold-gradient rounded-[3.5rem] flex items-center justify-center border-4 border-black shadow-2xl cursor-pointer overflow-hidden mb-12 relative group">
+                                <h3 className="text-xl font-black gold-text mb-2 italic tracking-tighter leading-none">幫受害者易容</h3>
+                                <p className="text-[8px] text-slate-600 font-bold mb-10 tracking-[0.3em] uppercase">Updating Profile Photo</p>
+                                <div onClick={() => editFileRef.current.click()} className="w-48 h-48 mx-auto gold-gradient rounded-[3.5rem] flex items-center justify-center border-4 border-black shadow-2xl cursor-pointer overflow-hidden mb-12 relative group shadow-[0_20px_50px_-10px_rgba(184,134,11,0.4)]">
                                     {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" /> : <Icon name="camera" size={50} className="text-black/40" />}
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100"><Icon name="camera" size={40} className="text-white" /></div>
                                 </div>
-                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async e => { if(e.target.files[0]) { const p = await resize(e.target.files[0]); await db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: p }); setEditingUser(null); } }} />
+                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async e => e.target.files[0] && db.collection('artifacts').doc(APP_ID).collection('users').doc(editingUser.id).update({ photo: await resize(e.target.files[0]) }).then(()=>setEditingUser(null))} />
                                 <button onClick={() => setEditingUser(null)} className="text-slate-600 font-black hover:text-white transition-colors text-[9px] tracking-[0.5em] uppercase">算了，佢個樣夠滑稽喇</button>
                             </div>
                         </div>
