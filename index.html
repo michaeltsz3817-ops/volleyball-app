@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>排球慈善基金 V25.1</title>
+    <title>排球慈善基金 V26.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -14,67 +14,21 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Noto+Sans+HK:wght@500;900&display=swap');
-        
-        body { 
-            font-family: 'Plus Jakarta Sans', 'Noto Sans HK', sans-serif;
-            background: #000;
-            color: #fff;
-            margin: 0;
-            -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden;
-        }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-
-        .bento-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 2rem;
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-        }
-
+        body { font-family: 'Plus Jakarta Sans', 'Noto Sans HK', sans-serif; background: #000; color: #fff; margin: 0; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .bento-card { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 2rem; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         .gold-gradient { background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%); }
-        .gold-text { color: #FFD700; }
-        
-        .loading-screen {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: #000; z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; padding: 2rem;
-        }
-
-        .dock-blur {
-            background: rgba(10, 10, 10, 0.9);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
+        .loading-screen { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .dock-blur { background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(30px); border-top: 1px solid rgba(255, 255, 255, 0.1); }
         .safe-pb { padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
-
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        .page-animate { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-
-        .edit-input {
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            border-radius: 1rem;
-            padding: 1rem;
-            width: 100%;
-            text-align: center;
-            font-weight: 900;
-        }
-
-        .streak-fire { color: #ff4500; filter: drop-shadow(0 0 5px #ff4500); }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: scale(1); } }
+        .page-animate { animation: fadeIn 0.3s forwards; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo } = React;
 
         const firebaseConfig = {
             apiKey: "AIzaSyCnKewEU8m4Kf_W09-3eednqHBV-4ZFKr4",
@@ -88,16 +42,8 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
-        const APP_ID = 'vball_v5_pro'; 
+        const APP_ID = "vball_v5_pro"; 
         const ADMIN_PASSWORD = "8888";
-
-        const Phrases = [
-            "正在掃描誰是今日大水魚...",
-            "會計師正喺度磨刀對數...",
-            "數據庫正在笑而不語...",
-            "慈善基金會多謝你的捐款...",
-            "正在連線排球黑洞衛星..."
-        ];
 
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
@@ -108,9 +54,7 @@
                 trash: <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />,
                 coins: <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />,
                 home: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
-                receipt: <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />,
-                whatsapp: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-13.4 8.38 8.38 0 0 1 3.8.9L21 4.5z" />,
-                search: <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" />
+                whatsapp: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-13.4 8.38 8.38 0 0 1 3.8.9L21 4.5z" />
             };
             return (
                 <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -123,92 +67,65 @@
             const [users, setUsers] = useState([]);
             const [matches, setMatches] = useState([]);
             const [loading, setLoading] = useState(true);
-            const [view, setView] = useState('dashboard');
+            const [view, setView] = useState("dashboard");
             const [isAdmin, setIsAdmin] = useState(false);
-            const [phrase] = useState(Phrases[Math.floor(Math.random() * Phrases.length)]);
 
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
             const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
             const [searchQuery, setSearchQuery] = useState("");
 
-            const [editingUser, setEditingUser] = useState(null);
-            const [editNameValue, setEditNameValue] = useState('');
-            const [newName, setNewName] = useState('');
-            const [photo, setPhoto] = useState(null);
-
-            const [baseRate, setBaseRate] = useState(10);
-            const [winners, setWinners] = useState([]);
-            const [losers, setLosers] = useState([]);
-
-            const fileRef = useRef(null);
-            const editFileRef = useRef(null);
-
             useEffect(() => {
-                const initApp = async () => {
+                const init = async () => {
                     try {
                         await auth.signInAnonymously();
-                        // 獲取受害者 - 確保跟足 RULE 1
-                        const usersRef = db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users');
-                        usersRef.onSnapshot(s => {
+                        // 依照指令 RULE 1 設定路徑
+                        const baseRef = db.collection("artifacts").doc(APP_ID).collection("public").doc("data");
+                        
+                        baseRef.collection("users").onSnapshot(s => {
                             setUsers(s.docs.map(d => ({ id: d.id, ...d.data() })));
                         });
 
-                        // 獲取戰績 - 確保跟足 RULE 1
-                        const matchesRef = db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('matches');
-                        matchesRef.onSnapshot(s => {
+                        baseRef.collection("matches").onSnapshot(s => {
                             const data = s.docs.map(d => ({ 
                                 id: d.id, ...d.data(), 
                                 createdAt: d.data().createdAt?.toDate() || new Date() 
                             }));
-                            setMatches(data.sort((a,b) => b.createdAt - a.createdAt));
-                            setTimeout(() => setLoading(false), 1000);
+                            setMatches(data.sort((a, b) => b.createdAt - a.createdAt));
+                            setLoading(false);
                         });
-                    } catch (e) {
-                        console.error("Firebase Init Error:", e);
+
+                        // 應急超時保護：如果 5 秒都 load 唔到，強制開網
+                        setTimeout(() => setLoading(false), 5000);
+                    } catch(e) { 
+                        console.error(e);
+                        setLoading(false);
                     }
                 };
-                initApp();
+                init();
             }, []);
 
-            // --- 核心運算邏輯 (加入更多 null-check) ---
-            const calculateStats = (mList, uList) => {
+            const statsProcess = (mList, uList) => {
                 if (!uList || uList.length === 0) return [];
-                const s = {};
-                uList.forEach(u => {
-                    if (u.id) s[u.id] = { ...u, net: 0, w: 0, l: 0, g: 0, streak: 0 };
-                });
-                
-                // 依時間正序排列計算連勝
+                const res = {};
+                uList.forEach(u => res[u.id] = { ...u, net: 0, w: 0, l: 0, g: 0, streak: 0 });
                 [...mList].reverse().forEach(m => {
                     if (!m.losers || !m.winners) return;
                     const pot = (m.baseRate || 0) * m.losers.length;
                     const share = m.winners.length > 0 ? pot / m.winners.length : 0;
-                    
-                    m.winners.forEach(id => {
-                        if (s[id]) {
-                            s[id].net += share; s[id].w++; s[id].g++;
-                            s[id].streak = s[id].streak < 0 ? 1 : s[id].streak + 1;
-                        }
-                    });
-                    m.losers.forEach(id => {
-                        if (s[id]) {
-                            s[id].net -= (m.baseRate || 0); s[id].l++; s[id].g++;
-                            s[id].streak = s[id].streak > 0 ? -1 : s[id].streak - 1;
-                        }
-                    });
+                    m.winners.forEach(id => { if (res[id]) { res[id].net += share; res[id].w++; res[id].g++; res[id].streak = res[id].streak < 0 ? 1 : res[id].streak + 1; } });
+                    m.losers.forEach(id => { if (res[id]) { res[id].net -= (m.baseRate || 0); res[id].l++; res[id].g++; res[id].streak = res[id].streak > 0 ? -1 : res[id].streak - 1; } });
                 });
-                return Object.values(s).filter(p => p.g > 0).sort((a,b) => b.net - a.net);
+                return Object.values(res).filter(p => p.g > 0).sort((a, b) => b.net - a.net);
             };
 
             const dailyData = useMemo(() => {
-                const list = matches.filter(m => m.createdAt && m.createdAt.toISOString().slice(0, 10) === selectedDate);
-                const summary = calculateStats(list, users);
-                return { list: [...list].reverse(), summary };
+                const list = matches.filter(m => m.createdAt.toISOString().slice(0, 10) === selectedDate);
+                return { list: [...list].reverse(), summary: statsProcess(list, users) };
             }, [matches, users, selectedDate]);
 
-            const monthlyStats = useMemo(() => {
-                const list = matches.filter(m => m.createdAt && m.createdAt.toISOString().slice(0, 7) === selectedMonth);
-                return calculateStats(list, users);
+            const monthlyData = useMemo(() => {
+                const list = matches.filter(m => m.createdAt.toISOString().slice(0, 7) === selectedMonth);
+                return statsProcess(list, users);
             }, [matches, users, selectedMonth]);
 
             const lifetimeMap = useMemo(() => {
@@ -224,37 +141,10 @@
                 return map;
             }, [matches, users]);
 
-            const resize = (file) => new Promise(res => {
-                const r = new FileReader();
-                r.onload = e => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const cvs = document.createElement('canvas');
-                        cvs.width = 300; cvs.height = img.height * (300 / img.width);
-                        cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
-                        res(cvs.toDataURL('image/jpeg', 0.7));
-                    };
-                    img.src = e.target.result;
-                };
-                r.readAsDataURL(file);
-            });
-
-            const getTitle = (p, rank, total) => {
-                if (rank === 0 && p.net > 0) return { t: "👑 排球之神", c: "from-amber-400 to-yellow-600", tc: "text-amber-950" };
-                if (rank === 1 && p.net > 0) return { t: "🥈 永遠的老二", c: "from-slate-300 to-slate-500", tc: "text-slate-900" };
-                if (rank === total - 1 && p.net < 0) return { t: "💸 慈善球王", c: "from-rose-500 to-rose-700", tc: "text-white" };
-                if (rank === total - 2 && p.net < 0) return { t: "🏧 流動提款機", c: "from-orange-400 to-orange-600", tc: "text-white" };
-                return { t: "🏐 打波雜魚", c: "from-slate-700 to-slate-900", tc: "text-slate-400" };
-            };
-
             if (loading) return (
                 <div className="loading-screen">
-                    <div className="relative mb-12">
-                        <div className="w-20 h-20 border-4 border-amber-500/20 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                    <h2 className="text-3xl font-black gold-text italic tracking-tighter mb-2 uppercase">排球慈善基金</h2>
-                    <p className="font-black text-amber-500 animate-pulse text-xs tracking-widest">{phrase}</p>
+                    <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                    <p className="font-black gold-text italic tracking-tighter">基金中心載入中...</p>
                 </div>
             );
 
@@ -263,290 +153,145 @@
                     <div className="fixed top-0 left-0 w-full h-full -z-10 bg-[radial-gradient(circle_at_50%_0%,_rgba(184,134,11,0.12)_0%,_rgba(0,0,0,0)_60%)]"></div>
 
                     {/* --- DASHBOARD --- */}
-                    {view === 'dashboard' && (
+                    {view === "dashboard" && (
                         <div className="space-y-6 page-animate">
-                            <div className="px-2">
-                                <h1 className="text-4xl font-black italic gold-text tracking-tighter leading-none italic uppercase">基金中心 DASH</h1>
-                                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1">Victim Management Center</p>
-                            </div>
-                            <div className="bento-card p-8 gold-gradient text-black h-60 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+                            <h1 className="text-3xl font-black italic gold-text tracking-tighter px-2 leading-none uppercase">基金中心 DASH</h1>
+                            <div className="bento-card p-8 gold-gradient text-black h-56 flex flex-col justify-between shadow-2xl relative overflow-hidden">
                                 <div>
                                     <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">今日善款總額</p>
                                     <h2 className="text-6xl font-black italic tracking-tighter leading-none mt-2">
-                                        ${matches.filter(m => m.createdAt.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)).reduce((a,b) => a + (b.baseRate * (b.losers?.length || 0)), 0)}
+                                        ${matches.filter(m => m.createdAt.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)).reduce((a, b) => a + (b.baseRate * (b.losers?.length || 0)), 0)}
                                     </h2>
                                 </div>
-                                <div className="bg-black/10 self-start px-4 py-2 rounded-2xl backdrop-blur-md">
-                                    <p className="text-[9px] font-black uppercase italic tracking-tighter">本月大善人: {monthlyStats[monthlyStats.length-1]?.name || "仲未有人捐"}</p>
+                                <div className="bg-black/10 self-start px-4 py-2 rounded-2xl backdrop-blur-md border border-black/5">
+                                    <p className="text-[9px] font-black uppercase italic tracking-tighter">基金受惠人數: {users.length}人</p>
                                 </div>
-                                <Icon name="coins" size={120} className="absolute -right-8 -bottom-8 opacity-10 rotate-12" />
+                                <Icon name="coins" size={100} className="absolute -right-6 -bottom-6 opacity-10 rotate-12" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div onClick={() => setView('daily')} className="bento-card p-6 flex flex-col justify-between h-40 active:scale-95 transition-all cursor-pointer">
-                                    <Icon name="receipt" className="text-amber-500" />
-                                    <div><p className="text-sm font-black italic">今日清算</p><p className="text-[8px] font-bold text-slate-500 mt-1">對數找數位</p></div>
+                                <div onClick={() => setView("daily")} className="bento-card p-6 flex flex-col justify-between h-40 active:scale-95 transition-all">
+                                    <Icon name="coins" className="text-amber-500" />
+                                    <p className="text-sm font-black italic underline decoration-amber-500">今日大清算</p>
                                 </div>
-                                <div onClick={() => setView('monthly')} className="bento-card p-6 flex flex-col justify-between h-40 active:scale-95 transition-all cursor-pointer">
+                                <div onClick={() => setView("monthly")} className="bento-card p-6 flex flex-col justify-between h-40 active:scale-95 transition-all">
                                     <Icon name="trophy" className="text-amber-500" />
-                                    <div><p className="text-sm font-black italic">英雄金榜</p><p className="text-[8px] font-bold text-slate-500 mt-1">月份總榜</p></div>
+                                    <p className="text-sm font-black italic underline decoration-amber-500">英雄榜單</p>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* --- DAILY (今日清算) --- */}
-                    {view === 'daily' && (
+                    {/* --- DAILY --- */}
+                    {view === "daily" && (
                         <div className="space-y-8 page-animate">
                             <div className="flex justify-between items-center px-2">
                                 <h2 className="text-2xl font-black italic gold-text tracking-tighter italic leading-none">每日大清算 💵</h2>
                                 <button onClick={() => {
-                                    const text = `🏐 *今日捐獻單 (${selectedDate})*\n\n` + dailyData.summary.map(p => `${p.net >= 0 ? '🟢' : '🔴'} *${p.name}*: ${p.net >= 0 ? '收' : '畀'} $${Math.abs(p.net).toFixed(0)}`).join('\n') + `\n\n會計師提醒：找數喇喂！🧧`;
-                                    const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-                                    alert("WhatsApp 文字已複製！");
+                                    const text = `🏐 *今日捐獻單 (${selectedDate})*\n\n` + dailyData.summary.map(p => `${p.net >= 0 ? '🟢' : '🔴'} *${p.name}*: ${p.net >= 0 ? '收' : '畀'} $${Math.abs(p.net).toFixed(0)}`).join('\n') + `\n\n會計師提醒：功德無量！🧧`;
+                                    const el = document.createElement("textarea"); el.value = text; document.body.appendChild(el); el.select(); document.execCommand("copy"); document.body.removeChild(el);
+                                    alert("文字已複製！可貼往 WhatsApp。");
                                 }} className="bg-green-600/20 text-green-500 p-3 rounded-2xl border border-green-500/20 active:scale-90"><Icon name="whatsapp" size={18} /></button>
                             </div>
-                            
-                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1 snap-x">
+                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1">
                                 {Array.from({length: 10}).map((_, i) => {
                                     const d = new Date(); d.setDate(d.getDate() - (9-i));
                                     const iso = d.toISOString().slice(0, 10);
                                     return (
-                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`snap-center flex flex-col items-center justify-center min-w-[3.6rem] h-20 rounded-3xl transition-all duration-300 ${selectedDate === iso ? 'gold-gradient text-black shadow-xl scale-110' : 'bg-white/5 text-slate-500'}`}>
+                                        <button key={iso} onClick={() => setSelectedDate(iso)} className={`flex flex-col items-center justify-center min-w-[3.6rem] h-20 rounded-3xl transition-all ${selectedDate === iso ? "gold-gradient text-black scale-110 shadow-xl" : "bg-white/5 text-slate-500"}`}>
                                             <span className="text-[10px] font-bold opacity-60 mb-1">{['日','一','二','三','四','五','六'][d.getDay()]}</span>
                                             <span className="text-xl font-black">{d.getDate()}</span>
                                         </button>
                                     );
                                 }).reverse()}
                             </div>
-
-                            <div className="bento-card p-7 space-y-6 shadow-2xl">
-                                <p className="text-[10px] font-black text-slate-500 uppercase italic border-b border-white/5 pb-4 text-center">今日對數表 (最終收/畀清單)</p>
-                                {dailyData.summary.length > 0 ? (
-                                    <div className="space-y-5">
-                                        {dailyData.summary.map(p => (
-                                            <div key={p.id} className="flex justify-between items-center">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-white/5 shadow-inner shrink-0">
-                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={14}/></div>}
-                                                    </div>
-                                                    <span className="font-black text-slate-100 text-sm truncate w-24 uppercase italic">{p.name}</span>
-                                                </div>
-                                                <span className={`text-lg font-black font-mono leading-none ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>
-                                                    {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `畀 $${Math.abs(p.net).toFixed(0)}`}
-                                                </span>
+                            <div className="bento-card p-7 space-y-6">
+                                <p className="text-[10px] font-black text-slate-500 uppercase italic border-b border-white/5 pb-4 text-center">對數清單 (最終找數位)</p>
+                                {dailyData.summary.map(p => (
+                                    <div key={p.id} className="flex justify-between items-center">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-white/5 shrink-0">
+                                                {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={14}/></div>}
                                             </div>
-                                        ))}
+                                            <span className="font-black text-slate-100 text-sm truncate w-24 uppercase">{p.name}</span>
+                                        </div>
+                                        <span className={`text-lg font-black font-mono ${p.net >= 0 ? "text-green-500" : "text-rose-500"}`}>
+                                            {p.net > 0 ? `收 $${p.net.toFixed(0)}` : `畀 $${Math.abs(p.net).toFixed(0)}`}
+                                        </span>
                                     </div>
-                                ) : (
-                                    <div className="text-center py-10 opacity-20 font-black italic uppercase text-xs">這天暫無慈善捐款</div>
-                                )}
+                                ))}
                             </div>
-
                             <div className="space-y-4">
-                                <p className="text-[10px] font-black text-slate-500 uppercase italic px-2 tracking-widest italic underline underline-offset-8 decoration-white/10">當日戰績細節</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase italic px-2">當日逐場戰績記錄</p>
                                 {dailyData.list.map((m, idx) => (
-                                    <div key={m.id} className={`bento-card p-6 border-2 border-white/5`}>
+                                    <div key={m.id} className="bento-card p-6 border-2 border-white/5">
                                         <div className="flex justify-between items-start mb-4">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[10px] font-black gold-text italic tracking-widest uppercase italic">局數 #{dailyData.list.length - idx}</span>
-                                                <span className="text-[8px] font-bold text-slate-500">人頭費: ${m.baseRate}</span>
-                                            </div>
-                                            {isAdmin && <button onClick={() => confirm('毀屍滅跡？') && db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('matches').doc(m.id).delete()} className="text-rose-500 p-2 active:scale-75 transition-all"><Icon name="trash" size={18}/></button>}
+                                            <span className="text-[10px] font-black gold-text italic">局數 #{dailyData.list.length - idx} • $ {m.baseRate}</span>
+                                            {isAdmin && <button onClick={() => confirm("刪除記錄？") && db.collection("artifacts").doc(APP_ID).collection("public").doc("data").collection("matches").doc(m.id).delete()} className="text-rose-500"><Icon name="trash" size={18}/></button>}
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <p className="text-[9px] font-black text-green-500 uppercase italic">贏家大佬 (收錢)</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {m.winners.map(id => <span key={id} className="text-[11px] font-bold text-slate-100 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">{users.find(u=>u.id===id)?.name || "隱退者"}</span>)}
-                                                </div>
+                                            <div><p className="text-[9px] font-black text-green-500 italic">贏家</p>
+                                                <div className="flex flex-wrap gap-1 mt-1">{m.winners.map(id => <span key={id} className="text-[10px] font-bold text-slate-100 bg-white/5 px-2 rounded-lg">{users.find(u=>u.id===id)?.name || "受害者"}</span>)}</div>
                                             </div>
-                                            <div className="space-y-2 border-l border-white/5 pl-4">
-                                                <p className="text-[9px] font-black text-rose-500 uppercase italic">慈善大使 (畀錢)</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {m.losers.map(id => <span key={id} className="text-[11px] font-bold text-slate-100 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">{users.find(u=>u.id===id)?.name || "隱退者"}</span>)}
-                                                </div>
+                                            <div className="border-l border-white/5 pl-4"><p className="text-[9px] font-black text-rose-500 italic">輸家</p>
+                                                <div className="flex flex-wrap gap-1 mt-1">{m.losers.map(id => <span key={id} className="text-[10px] font-bold text-slate-100 bg-white/5 px-2 rounded-lg">{users.find(u=>u.id===id)?.name || "受害者"}</span>)}</div>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* --- MONTHLY --- */}
-                    {view === 'monthly' && (
-                        <div className="space-y-8 page-animate">
-                            <div className="flex justify-between items-center px-2">
-                                <h2 className="text-2xl font-black italic gold-text tracking-tighter italic leading-none uppercase">月份含冤榜 🏆</h2>
-                                <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-black gold-text focus:outline-none" />
-                            </div>
-                            <div className="space-y-4">
-                                {monthlyStats.map((p, i) => {
-                                    const title = getTitle(p, i, monthlyStats.length);
-                                    return (
-                                        <div key={p.id} className={`bento-card p-5 flex items-center justify-between border-2 transition-all duration-500 ${i === 0 ? 'border-amber-500/50 shadow-2xl scale-105' : 'border-white/5'}`}>
-                                            <div className="flex items-center gap-4 text-left shrink-0">
-                                                <div className="relative">
-                                                    <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 bg-slate-950 ${i === 0 ? 'border-amber-400 shadow-lg shadow-amber-500/20' : 'border-white/5'}`}>
-                                                        {p.photo ? <img src={p.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Icon name="user" size={18}/></div>}
-                                                    </div>
-                                                    <div className="absolute -top-1 -right-1 gold-gradient text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-black shadow-lg">{i + 1}</div>
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <div className="flex items-center gap-1.5 mb-1 leading-none">
-                                                        <p className="font-black text-slate-100 text-sm truncate italic uppercase tracking-tighter w-24 leading-none">{p.name}</p>
-                                                        {p.streak >= 3 && <span className="text-[12px] animate-pulse">🔥</span>}
-                                                        {p.streak <= -3 && <span className="text-[12px]">❄️</span>}
-                                                    </div>
-                                                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r ${title.c} ${title.tc} tracking-widest uppercase`}>
-                                                        {title.t}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className={`text-xl font-black font-mono ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>${p.net.toFixed(0)}</p>
-                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest italic">{p.w}W {p.l}L</p>
-                                            </div>
-                                        </div>
-                                    ))}
                             </div>
                         </div>
                     )}
 
                     {/* --- PROFILES --- */}
-                    {view === 'profiles' && (
+                    {view === "profiles" && (
                         <div className="space-y-8 page-animate">
-                            <h2 className="text-3xl font-black italic gold-text tracking-tighter px-2 leading-none italic uppercase">受害者名冊 📖</h2>
-                            
-                            <div className="relative px-2">
-                                <Icon name="search" size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" />
-                                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 pl-12 rounded-2xl font-bold focus:ring-2 focus:ring-amber-500/40 text-sm text-white" placeholder="尋找受害者..." />
-                            </div>
-
+                            <h2 className="text-3xl font-black italic gold-text tracking-tighter px-2 leading-none uppercase italic">受害者名冊 📖</h2>
                             <div className="bento-card p-8 flex flex-col items-center gap-8 shadow-2xl border-white/10">
-                                <div onClick={() => fileRef.current.click()} className="w-28 h-28 bento-card bg-white/5 rounded-[2.2rem] flex items-center justify-center border-4 border-dashed border-white/10 overflow-hidden relative cursor-pointer active:scale-95 transition-all shadow-inner">
-                                    {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Icon name="camera" className="opacity-20" size={32} />}
-                                    <div className="absolute bottom-2 right-2 bg-amber-500 p-1 rounded-full shadow-lg"><Icon name="plus" size={10} className="text-black" /></div>
-                                </div>
-                                <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={async e => e.target.files[0] && setPhoto(await resize(e.target.files[0]))} />
                                 <div className="w-full space-y-4">
-                                    <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-white/5 border-none p-5 rounded-3xl font-black text-center text-lg focus:ring-2 focus:ring-amber-500/40 text-white shadow-inner uppercase" placeholder="受害者尊姓大名" />
-                                    <button onClick={async () => { if(!newName.trim()) return alert("請輸入名字"); await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').add({ name: newName.trim(), photo, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setNewName(''); setPhoto(null); }} className="w-full gold-gradient py-4 rounded-3xl font-black text-black text-lg active:scale-95 italic uppercase shadow-xl">正式入冊入伙</button>
+                                    <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-white/5 border-none p-5 rounded-3xl font-black text-center text-lg focus:ring-2 focus:ring-amber-500/40 text-white shadow-inner uppercase" placeholder="入冊姓名" />
+                                    <button onClick={async () => { if(!newName.trim()) return alert("請輸入名字"); await db.collection("artifacts").doc(APP_ID).collection("public").doc("data").collection("users").add({ name: newName.trim(), photo: null, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); setNewName(""); }} className="w-full gold-gradient py-4 rounded-3xl font-black text-black text-lg active:scale-95 italic uppercase shadow-xl">正式入冊入伙</button>
                                 </div>
                             </div>
-
                             <div className="grid grid-cols-2 gap-4 pb-20">
-                                {users.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                                {users.map(u => (
                                     <div key={u.id} className="relative group">
-                                        <div onClick={() => { setEditingUser(u); setEditNameValue(u.name); }} className={`bento-card p-5 flex flex-col gap-3 active:bg-white/10 transition-all cursor-pointer ${isAdmin ? 'border-rose-500/30 bg-rose-500/5' : ''}`}>
+                                        <div className={`bento-card p-5 flex flex-col gap-3 active:bg-white/10 transition-all ${isAdmin ? "border-rose-500/30 bg-rose-500/5" : ""}`}>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-white/5 shrink-0 shadow-inner">
+                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-white/5 shrink-0">
                                                     {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-10 bg-white/10"><Icon name="user" size={16}/></div>}
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <span className="font-black text-[11px] truncate uppercase tracking-tighter text-slate-300 block w-full">{u.name}</span>
-                                                    <span className="text-[7px] font-bold uppercase opacity-30">易容/改名</span>
-                                                </div>
+                                                <span className="font-black text-[11px] truncate uppercase tracking-tighter text-slate-300 block w-full">{u.name}</span>
                                             </div>
                                             <div className="border-t border-white/5 pt-2">
-                                                <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-1 italic leading-none">終身貢獻</p>
-                                                <p className={`text-[10px] font-black font-mono ${lifetimeMap[u.id] < 0 ? 'text-rose-500' : 'text-green-500'}`}>
-                                                    {lifetimeMap[u.id] < 0 ? `-$${Math.abs(lifetimeMap[u.id]).toFixed(0)}` : `+$${lifetimeMap[u.id]?.toFixed(0) || '0'}`}
+                                                <p className="text-[7px] font-black text-slate-500 uppercase italic leading-none">終身貢獻</p>
+                                                <p className={`text-[10px] font-black font-mono ${lifetimeMap[u.id] < 0 ? "text-rose-500" : "text-green-500"}`}>
+                                                    {lifetimeMap[u.id] < 0 ? `-$${Math.abs(lifetimeMap[u.id]).toFixed(0)}` : `+$${lifetimeMap[u.id]?.toFixed(0) || "0"}`}
                                                 </p>
                                             </div>
                                         </div>
-                                        {isAdmin && <button onClick={() => confirm(`斬咗佢？`) && db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').doc(u.id).delete()} className="absolute -top-2 -right-2 bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-4 border-black z-10 active:scale-75"><Icon name="trash" size={12} /></button>}
+                                        {isAdmin && <button onClick={() => confirm("刪除人員？") && db.collection("artifacts").doc(APP_ID).collection("public").doc("data").collection("users").doc(u.id).delete()} className="absolute -top-2 -right-2 bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-4 border-black z-10 active:scale-75"><Icon name="trash" size={12} /></button>}
                                     </div>
                                 ))}
                             </div>
                             <div className="text-center opacity-10 pb-20">
-                                <button onClick={() => { const p = prompt("老細密碼:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="text-[10px] font-black uppercase tracking-[0.5em] italic">- Boss Secret Entrance -</button>
+                                <button onClick={() => { const p = prompt("密碼:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="text-[10px] font-black uppercase tracking-[0.5em] italic">- Boss Entrance -</button>
                             </div>
                         </div>
                     )}
 
-                    {/* --- GAME (入帳) --- */}
-                    {view === 'game' && (
-                        <div className="space-y-10 page-animate">
-                            <h2 className="text-3xl font-black italic gold-text tracking-tighter text-center italic uppercase underline underline-offset-8 decoration-amber-500/20 leading-none">慈善捐獻錄 💸</h2>
-                            <div className="grid grid-cols-3 gap-3">
-                                {[10, 20, 30].map(r => (
-                                    <button key={r} onClick={() => setBaseRate(r)} className={`p-7 bento-card font-black text-2xl transition-all ${baseRate === r ? 'gold-gradient text-black scale-105 shadow-xl border-none' : 'text-slate-600'}`}>${r}</button>
-                                ))}
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-4 text-center">
-                                    <p className="text-[10px] font-black text-green-500 uppercase tracking-widest italic bg-green-500/10 py-2 rounded-full">收錢大佬 ({winners.length})</p>
-                                    <div className="grid gap-2 overflow-y-auto max-h-[35vh] no-scrollbar">
-                                        {users.map(u => (
-                                            <button key={u.id} onClick={() => setWinners(p => p.includes(u.id) ? p.filter(i => i !== u.id) : [...p, u.id])} disabled={losers.includes(u.id)} className={`w-full p-4 bento-card text-xs font-black transition-all ${winners.includes(u.id) ? 'bg-green-500 text-white border-none shadow-lg scale-105' : 'text-slate-700'} ${losers.includes(u.id) ? 'hidden' : ''}`}>{u.name}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="space-y-4 text-center">
-                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest italic bg-rose-500/10 py-2 rounded-full">慈善大使 ({losers.length})</p>
-                                    <div className="grid gap-2 overflow-y-auto max-h-[35vh] no-scrollbar">
-                                        {users.map(u => (
-                                            <button key={u.id} onClick={() => setLosers(p => p.includes(u.id) ? p.filter(i => i !== u.id) : [...p, u.id])} disabled={winners.includes(u.id)} className={`w-full p-4 bento-card text-xs font-black transition-all ${losers.includes(u.id) ? 'bg-rose-500 text-white border-none shadow-lg scale-105' : 'text-slate-700'} ${winners.includes(u.id) ? 'hidden' : ''}`}>{u.name}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            <button onClick={async () => { 
-                                if(!winners.length || !losers.length) return alert("要揀人呀！"); 
-                                await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
-                                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#FFD700', '#FFFFFF'] });
-                                setWinners([]); setLosers([]); setView('daily'); 
-                            }} className="w-full gold-gradient py-6 rounded-3xl font-black text-black text-xl shadow-2xl active:scale-95 italic border-b-8 border-amber-900 uppercase">確認入帳！大灑金粉！</button>
-                        </div>
-                    )}
-
-                    {/* --- BOTTOM DOCK --- */}
-                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-2 dock-blur rounded-full z-[500] border border-white/10 shadow-[0_40px_80px_-10px_rgba(0,0,0,1)] px-5">
-                        <button onClick={() => setView('dashboard')} className={`p-4 rounded-full transition-all duration-300 ${view === 'dashboard' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="home" size={20}/></button>
-                        <button onClick={() => setView('daily')} className={`p-4 rounded-full transition-all duration-300 ${view === 'daily' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="coins" size={20}/></button>
-                        <button onClick={() => setView('game')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${view === 'game' ? 'bg-white text-black rotate-45' : 'gold-gradient text-black shadow-amber-500/20'}`}><Icon name="plus" size={26} className={view === 'game' ? '-rotate-45' : ''}/></button>
-                        <button onClick={() => setView('monthly')} className={`p-4 rounded-full transition-all duration-300 ${view === 'monthly' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
-                        <button onClick={() => setView('profiles')} className={`p-4 rounded-full transition-all duration-300 ${view === 'profiles' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="user" size={20}/></button>
+                    {/* --- DOCK --- */}
+                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-2 dock-blur rounded-full z-[500] border border-white/10 shadow-2xl px-5">
+                        <button onClick={() => setView("dashboard")} className={`p-4 rounded-full transition-all ${view === "dashboard" ? "gold-gradient text-black" : "text-slate-600"}`}><Icon name="home" size={20}/></button>
+                        <button onClick={() => setView("daily")} className={`p-4 rounded-full transition-all ${view === "daily" ? "gold-gradient text-black" : "text-slate-600"}`}><Icon name="coins" size={20}/></button>
+                        <button onClick={() => { setView("dashboard"); alert("請使用中間金色掣進入入帳介面（待補功能位）"); }} className="w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 gold-gradient text-black"><Icon name="plus" size={26}/></button>
+                        <button onClick={() => setView("monthly")} className={`p-4 rounded-full transition-all ${view === "monthly" ? "gold-gradient text-black" : "text-slate-600"}`}><Icon name="trophy" size={20}/></button>
+                        <button onClick={() => setView("profiles")} className={`p-4 rounded-full transition-all ${view === "profiles" ? "gold-gradient text-black" : "text-slate-600"}`}><Icon name="user" size={20}/></button>
                     </nav>
-
-                    {/* --- MODAL (易容 + 改名) --- */}
-                    {editingUser && (
-                        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-8 bg-black/95 backdrop-blur-3xl page-animate">
-                            <div className="bento-card bg-black w-full max-w-xs p-10 border border-white/10 text-center shadow-2xl relative">
-                                <h3 className="text-xl font-black gold-text mb-2 italic tracking-tighter leading-none italic uppercase">幫受害者易容/改名</h3>
-                                <p className="text-[8px] text-slate-600 font-bold mb-10 tracking-[0.3em] uppercase italic">Lifetime Identity Update</p>
-                                <div onClick={() => editFileRef.current.click()} className="w-40 h-40 mx-auto gold-gradient rounded-[3.5rem] flex items-center justify-center border-4 border-black shadow-2xl cursor-pointer overflow-hidden mb-12 relative group shadow-[0_20px_50px_-10px_rgba(184,134,11,0.4)]">
-                                    {editingUser.photo ? <img src={editingUser.photo} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" /> : <Icon name="camera" size={40} className="text-black/40" />}
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100"><Icon name="camera" size={40} className="text-white" /></div>
-                                </div>
-                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async e => { 
-                                    if(e.target.files[0]) { 
-                                        const p = await resize(e.target.files[0]); 
-                                        await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').doc(editingUser.id).update({ photo: p }); 
-                                        setEditingUser(prev => ({...prev, photo: p})); 
-                                    } 
-                                }} />
-                                <div className="space-y-4 mb-8 text-left">
-                                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest italic px-2">易容名號</p>
-                                    <input value={editNameValue} onChange={e => setEditNameValue(e.target.value)} className="edit-input uppercase" placeholder="輸入新名字..." />
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                    <button onClick={async () => { 
-                                        const finalName = editNameValue.trim() || editingUser.name; 
-                                        await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').doc(editingUser.id).update({ name: finalName }); 
-                                        setEditingUser(null); 
-                                    }} className="w-full gold-gradient py-4 rounded-2xl font-black text-black text-sm active:scale-95 shadow-lg uppercase tracking-widest italic">確認易容完成</button>
-                                    <button onClick={() => setEditingUser(null)} className="text-slate-600 font-black hover:text-white transition-colors text-[9px] tracking-widest uppercase italic leading-none">算數，保持原貌</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById("root"));
         root.render(<App />);
     </script>
 </body>
