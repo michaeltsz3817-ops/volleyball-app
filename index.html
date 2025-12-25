@@ -4,19 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- PWA 設定 -->
+    <!-- PWA 全螢幕設定 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="排球基金">
     
-    <!-- 
-      *** Icon 修復 *** 改用外部高清 PNG 連結，確保 iOS 能正確讀取。
-      圖示：一個立體排球
-    -->
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3503/3503827.png">
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3503/3503827.png">
+    <!-- 預設佔位圖示 (稍後會被 JS 替換) -->
+    <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏐</text></svg>">
+    <link rel="apple-touch-icon" id="appleicon" href="">
 
-    <title>排球慈善基金 V39.0</title>
+    <title>排球慈善基金 V40.0</title>
     
     <!-- 1. 載入核心工具 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,6 +26,54 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // --- 核心技術：動態生成 App Icon ---
+        // 這段代碼會在頁面加載時，畫出一張 PNG 圖片並設為 App Icon
+        window.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            // 1. 畫背景 (金色漸變)
+            const grd = ctx.createLinearGradient(0, 0, 512, 512);
+            grd.addColorStop(0, "#FFD700");
+            grd.addColorStop(1, "#DAA520");
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // 2. 畫排球 (白色圓形 + 線條)
+            ctx.beginPath();
+            ctx.arc(256, 256, 180, 0, 2 * Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            
+            // 3. 畫排球線條 (簡化版)
+            ctx.lineWidth = 15;
+            ctx.strokeStyle = "#DAA520";
+            ctx.beginPath();
+            ctx.arc(256, 256, 180, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(256, 76);
+            ctx.quadraticCurveTo(350, 256, 256, 436);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(85, 200);
+            ctx.quadraticCurveTo(256, 256, 427, 200);
+            ctx.stroke();
+
+            // 4. 輸出為圖片連結
+            const iconUrl = canvas.toDataURL('image/png');
+            
+            // 5. 強制應用到 iOS Icon
+            document.getElementById('appleicon').href = iconUrl;
+            document.getElementById('favicon').href = iconUrl;
+        };
+    </script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Noto+Sans+HK:wght@500;900&display=swap');
@@ -98,7 +143,6 @@
         const APP_ID = "vball_v5_pro";
         const ADMIN_PASSWORD = "8888";
 
-        // *** NEW DESIGNED ICONS ***
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
                 // Home: Bold House
@@ -512,9 +556,9 @@
                         </div>
                     )}
 
-                    {/* MANUAL ENTRY */}
+                    {/* MANUAL ENTRY (FIXED PADDING) */}
                     {view === 'game' && (
-                        <div className="flex flex-col h-full page-animate pb-32">
+                        <div className="flex flex-col h-full page-animate pb-40">
                             <h2 className="text-3xl font-black italic text-amber-400 tracking-tighter text-center shrink-0">手動補飛 💸</h2>
                             <p className="text-center text-xs opacity-50 -mt-2 mb-4 shrink-0">適合用於記錄過往賽事或特殊調整</p>
                             <div className="grid grid-cols-3 gap-3 mb-4 shrink-0">
@@ -523,7 +567,7 @@
                             <div className="flex-1 min-h-0 grid grid-cols-2 gap-4 relative">
                                 <div className="flex flex-col h-full bg-white/5 rounded-3xl p-3 border border-white/5 overflow-hidden">
                                     <p className="text-[10px] font-black text-green-500 uppercase text-center bg-green-500/10 py-3 rounded-2xl italic mb-3 shrink-0">收錢大佬 ({winners.length})</p>
-                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-20">
+                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-32">
                                         {sortedUsers.map(u => (
                                             <button key={u.id} onClick={() => setWinners(prev => prev.includes(u.id) ? prev.filter(i => i !== u.id) : [...prev, u.id])} 
                                                 disabled={losers.includes(u.id)} 
@@ -538,7 +582,7 @@
                                 </div>
                                 <div className="flex flex-col h-full bg-white/5 rounded-3xl p-3 border border-white/5 overflow-hidden">
                                     <p className="text-[10px] font-black text-rose-500 uppercase text-center bg-rose-500/10 py-3 rounded-2xl italic mb-3 shrink-0">慈善大使 ({losers.length})</p>
-                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-20">
+                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-32">
                                         {sortedUsers.map(u => (
                                             <button key={u.id} onClick={() => setLosers(prev => prev.includes(u.id) ? prev.filter(i => i !== u.id) : [...prev, u.id])} 
                                                 disabled={winners.includes(u.id)} 
@@ -552,7 +596,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div className="fixed bottom-[120px] left-0 right-0 p-4 z-40 glass-panel flex justify-center pb-8 pt-4">
+                            <div className="fixed bottom-[130px] left-0 right-0 p-4 z-40 glass-panel flex justify-center pb-8 pt-4">
                                 <button onClick={manualEntrySave} className="w-full max-w-sm gold-gradient py-4 rounded-3xl font-black text-black text-lg active:scale-95 italic uppercase shadow-[0_0_30px_rgba(255,215,0,0.3)] border-2 border-yellow-300">確認入帳 💰</button>
                             </div>
                         </div>
