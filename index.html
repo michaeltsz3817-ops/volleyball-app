@@ -3,7 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>排球慈善基金 V32.0</title>
+    
+    <!-- PWA / App Icon 設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="排球基金">
+    
+    <!-- 這裡是用 SVG 生成的 App Icon (金底排球) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23F59E0B%22/><text y=%2275%22 x=%2250%22 font-size=%2260%22 text-anchor=%22middle%22>🏐</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23F59E0B%22/><text y=%2275%22 x=%2250%22 font-size=%2260%22 text-anchor=%22middle%22>🏐</text></svg>">
+
+    <title>排球慈善基金 V38.0</title>
     
     <!-- 1. 載入核心工具 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -22,17 +32,29 @@
         body { background: #000; color: #fff; font-family: 'Noto Sans HK', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; margin: 0; }
         .bento-card { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; backdrop-filter: blur(20px); }
         .gold-gradient { background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%); }
-        .dock-blur { background: rgba(10,10,10,0.95); backdrop-filter: blur(30px); border-top: 1px solid rgba(255,255,255,0.1); }
+        .blue-gradient { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        .red-gradient { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); }
+        .dock-blur { background: rgba(10,10,10,0.85); backdrop-filter: blur(40px); border-top: 1px solid rgba(255,255,255,0.1); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+        .glass-panel { background: rgba(0,0,0,0.7); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.1); }
         .loading-screen { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .safe-pb { padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+        .safe-pb { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .error-box { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a0505; color: #ff6b6b; padding: 20px; z-index: 10000; display: none; flex-direction: column; justify-content: center; text-align: center; }
         .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+        .vs-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10; font-weight: 900; font-style: italic; font-size: 2rem; text-shadow: 0 4px 20px rgba(0,0,0,0.8); background: black; padding: 0.5rem 1rem; border-radius: 1rem; border: 2px solid #333; }
         #root:empty::before { content: "系統啟動中... (若卡住請刷新)"; display: block; text-align: center; padding-top: 50vh; color: #fbbf24; font-weight: bold; }
+        
+        /* Animation */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; animation: fadeIn 0.2s forwards; }
+        .modal-content { transform: scale(0.9); opacity: 0; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes popIn { to { transform: scale(1); opacity: 1; } }
+
+        /* Icon Glow */
+        .icon-active { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)); }
     </style>
 </head>
 <body>
-    <!-- 錯誤顯示區 -->
     <div id="error-display" class="error-box">
         <h2 style="font-size: 24px; margin-bottom: 10px;">💥 系統發生錯誤</h2>
         <p id="error-message" style="font-size: 14px; opacity: 0.8;"></p>
@@ -65,25 +87,41 @@
 
         try {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
         
         const db = firebase.firestore();
         const auth = firebase.auth();
         const APP_ID = "vball_v5_pro";
         const ADMIN_PASSWORD = "8888";
 
+        // New Refined Icons
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
-                home: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
-                coins: <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />,
+                // Dashboard (Grid)
+                home: <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />,
+                // Daily (Receipt)
+                coins: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />,
+                // Matchmaking (Whistle)
+                whistle: <path d="M12.5 7.5a4.5 4.5 0 0 0-6.364 6.364L12 20l5.864-6.136A4.5 4.5 0 0 0 12.5 7.5z M12 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />,
+                // Rank (Trophy)
+                trophy: <path d="M8 21h8m-4-9v9m0-18C7.5 3 4 5 4 9v2a6 6 0 0 0 4 6h8a6 6 0 0 0 4-6V9c0-4-3.5-6-8-6z" />,
+                // Profiles (Users Group)
+                user: <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
+                // Manual (Edit/Plus)
                 plus: <path d="M12 5v14M5 12h14" />,
-                trophy: <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M6 20h12M12 22V18m0-14v14M8 4h8a4 4 0 0 1 4 4v2a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" />,
-                user: <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
+                
+                // Utils
                 trash: <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />,
                 camera: <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
-                whatsapp: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-13.4 8.38 8.38 0 0 1 3.8.9L21 4.5z" />
+                whatsapp: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-13.4 8.38 8.38 0 0 1 3.8.9L21 4.5z" />,
+                shuffle: <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 5M4 4l5 5" />,
+                arrowRight: <path d="M5 12h14M12 5l7 7-7 7" />,
+                refresh: <path d="M23 4v6h-6M1 20v-6h6" />,
+                close: <path d="M18 6L6 18M6 6l12 12" />,
+                check: <path d="M20 6L9 17l-5-5" />,
+                lock: <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z" />,
+                warn: <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01" />,
+                balance: <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18" />
             };
             return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>{paths[name] || paths.home}</svg>;
         };
@@ -91,22 +129,39 @@
         function App() {
             const [users, setUsers] = useState([]);
             const [matches, setMatches] = useState([]);
-            const [view, setView] = useState('dashboard');
+            const [view, setView] = useState('matchmaking');
             const [loading, setLoading] = useState(true);
             const [isAdmin, setIsAdmin] = useState(false);
             const [isUploading, setIsUploading] = useState(false);
 
+            // Data States
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
             const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+            const [baseRate, setBaseRate] = useState(10);
 
+            // Manual Entry States
+            const [winners, setWinners] = useState([]);
+            const [losers, setLosers] = useState([]);
+
+            // User Edit States
             const [newName, setNewName] = useState("");
             const [editingUser, setEditingUser] = useState(null);
             const [editNameValue, setEditNameValue] = useState("");
             const [photo, setPhoto] = useState(null);
             
-            const [baseRate, setBaseRate] = useState(10);
-            const [winners, setWinners] = useState([]);
-            const [losers, setLosers] = useState([]);
+            // Matchmaking States
+            const [presentPlayers, setPresentPlayers] = useState([]);
+            const [matchMode, setMatchMode] = useState('select');
+            const [teamA, setTeamA] = useState([]);
+            const [teamB, setTeamB] = useState([]);
+            
+            // Modals
+            const [confirmModal, setConfirmModal] = useState(null);
+            const [deleteModal, setDeleteModal] = useState(null);
+            const [statsModal, setStatsModal] = useState(null);
+            const [showAdminLogin, setShowAdminLogin] = useState(false);
+            const [adminPwdInput, setAdminPwdInput] = useState("");
+            const [processing, setProcessing] = useState(false);
 
             const fileRef = useRef(null);
             const editFileRef = useRef(null);
@@ -137,31 +192,52 @@
                 init();
             }, []);
 
-            // 數據計算
-            const statsEngine = (mList, uList) => {
-                if (!uList.length) return [];
-                const res = {};
-                uList.forEach(u => res[u.id] = { ...u, net: 0, w: 0, l: 0 });
+            // --- Computed Data ---
+            const userStats = useMemo(() => {
+                const stats = {};
+                users.forEach(u => stats[u.id] = { ...u, wins: 0, losses: 0, streak: 0, streakType: '', netDrinks: 0 });
                 
-                mList.forEach(m => {
-                    if (!m.losers || !m.winners) return;
-                    const pot = (m.baseRate || 0) * m.losers.length;
-                    const share = m.winners.length > 0 ? pot / m.winners.length : 0;
-                    m.winners.forEach(id => { if (res[id]) { res[id].net += share; res[id].w++; } });
-                    m.losers.forEach(id => { if (res[id]) { res[id].net -= m.baseRate; res[id].l++; } });
+                [...matches].reverse().forEach(m => {
+                    if(!m.winners || !m.losers) return;
+                    m.winners.forEach(id => {
+                        if(stats[id]) {
+                            stats[id].wins++;
+                            stats[id].netDrinks += 1;
+                            if(stats[id].streakType === 'win') stats[id].streak++;
+                            else { stats[id].streakType = 'win'; stats[id].streak = 1; }
+                        }
+                    });
+                    m.losers.forEach(id => {
+                        if(stats[id]) {
+                            stats[id].losses++;
+                            stats[id].netDrinks -= 1;
+                            if(stats[id].streakType === 'loss') stats[id].streak++;
+                            else { stats[id].streakType = 'loss'; stats[id].streak = 1; }
+                        }
+                    });
                 });
-                return Object.values(res).filter(p => (p.w + p.l) > 0).sort((a,b) => b.net - a.net);
+                return stats;
+            }, [users, matches]);
+
+            const sortedUsers = useMemo(() => {
+                return [...users].sort((a, b) => a.name.localeCompare(b.name, 'zh-HK', { numeric: true }));
+            }, [users]);
+
+            const getFunnyTitle = (net, rank, total) => {
+                if (net > 0) {
+                    if (rank === 0) return "收數界KOL 👑";
+                    if (rank === 1) return "一人之下 💰";
+                    if (rank === 2) return "低調贏家 🦊";
+                    return "我要食飯 🍚";
+                } else if (net < 0) {
+                    const reverseRank = total - 1 - rank;
+                    if (reverseRank === 0) return "首席贊助商 💸";
+                    if (reverseRank === 1) return "慈善球王 🎗️";
+                    if (reverseRank === 2) return "黑仔過墨斗 ⚫";
+                    return "含冤受屈 🥲";
+                }
+                return "打個和 👋";
             };
-
-            const dailyData = useMemo(() => {
-                const list = matches.filter(m => m.createdAt.toISOString().slice(0, 10) === selectedDate);
-                return { list: [...list].reverse(), summary: statsEngine(list, users) };
-            }, [matches, users, selectedDate]);
-
-            const monthlyRank = useMemo(() => {
-                const list = matches.filter(m => m.createdAt.toISOString().slice(0, 7) === selectedMonth);
-                return statsEngine(list, users);
-            }, [matches, users, selectedMonth]);
 
             const resize = (file) => new Promise((resolve) => {
                 const reader = new FileReader();
@@ -182,42 +258,309 @@
                 };
             });
 
-            // Handle Add User
             const handleAddUser = async () => {
                 if (!newName.trim()) return alert("請輸入大名！");
                 setIsUploading(true);
                 try {
                     await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').add({
-                        name: newName.trim(),
-                        photo: photo,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        name: newName.trim(), photo: photo, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    setNewName("");
-                    setPhoto(null);
+                    setNewName(""); setPhoto(null);
                 } catch (e) { alert("上傳失敗"); }
                 setIsUploading(false);
             };
 
-            // Handle Update
             const handleUpdateUser = async () => {
                 if (!editingUser) return;
                 setIsUploading(true);
                 const finalName = editNameValue.trim() || editingUser.name;
                 try {
                     await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').doc(editingUser.id).update({
-                        name: finalName,
-                        photo: editingUser.photo
+                        name: finalName, photo: editingUser.photo
                     });
                     setEditingUser(null);
                 } catch (e) { alert("更新失敗"); }
                 setIsUploading(false);
             };
 
+            const handleAdminLogin = () => {
+                if(adminPwdInput === ADMIN_PASSWORD) {
+                    setIsAdmin(true);
+                    setShowAdminLogin(false);
+                    setAdminPwdInput("");
+                } else {
+                    alert("密碼錯誤，請走開。");
+                }
+            };
+
+            const handleDeleteMatch = async () => {
+                if(!deleteModal) return;
+                setProcessing(true);
+                try {
+                    await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('matches').doc(deleteModal.id).delete();
+                    setDeleteModal(null);
+                    setProcessing(false);
+                } catch(e) {
+                    alert("刪除失敗");
+                    setProcessing(false);
+                }
+            };
+
+            const statsEngine = (mList, uList) => {
+                if (!uList.length) return [];
+                const res = {};
+                uList.forEach(u => res[u.id] = { ...u, net: 0, w: 0, l: 0, drinks: 0 });
+                
+                mList.forEach(m => {
+                    if (!m.losers || !m.winners) return;
+                    const pot = (m.baseRate || 0) * m.losers.length;
+                    const share = m.winners.length > 0 ? pot / m.winners.length : 0;
+                    m.winners.forEach(id => { 
+                        if (res[id]) { 
+                            res[id].net += share; 
+                            res[id].w++; 
+                            res[id].drinks += 1;
+                        } 
+                    });
+                    m.losers.forEach(id => { 
+                        if (res[id]) { 
+                            res[id].net -= m.baseRate; 
+                            res[id].l++; 
+                            res[id].drinks -= 1;
+                        } 
+                    });
+                });
+                return Object.values(res).filter(p => (p.w + p.l) > 0).sort((a,b) => b.net - a.net);
+            };
+
+            const dailyData = useMemo(() => {
+                const list = matches.filter(m => m.createdAt.toISOString().slice(0, 10) === selectedDate);
+                return { list: [...list].reverse(), summary: statsEngine(list, users) };
+            }, [matches, users, selectedDate]);
+
+            const monthlyRank = useMemo(() => {
+                const list = matches.filter(m => m.createdAt.toISOString().slice(0, 7) === selectedMonth);
+                return statsEngine(list, users);
+            }, [matches, users, selectedMonth]);
+
+            const togglePresence = (id) => {
+                setPresentPlayers(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+            };
+
+            const shuffleTeams = () => {
+                if (presentPlayers.length < 2) return alert("最少要有兩個人！");
+                const shuffled = [...presentPlayers].sort(() => 0.5 - Math.random());
+                const mid = Math.ceil(shuffled.length / 2);
+                setTeamA(shuffled.slice(0, mid));
+                setTeamB(shuffled.slice(mid));
+                setMatchMode('play');
+            };
+
+            const balanceTeams = () => {
+                if (presentPlayers.length < 2) return alert("最少要有兩個人！");
+                const playersWithStats = presentPlayers.map(id => {
+                    const s = userStats[id];
+                    const total = s.wins + s.losses;
+                    const rate = total > 0 ? s.wins / total : 0.5;
+                    return { id, rate };
+                }).sort((a, b) => b.rate - a.rate);
+
+                const team1 = [];
+                const team2 = [];
+                playersWithStats.forEach((p, i) => {
+                    if (i % 4 === 0 || i % 4 === 3) team1.push(p.id);
+                    else team2.push(p.id);
+                });
+
+                setTeamA(team1);
+                setTeamB(team2);
+                setMatchMode('play');
+            };
+
+            const swapTeam = (id, fromTeam) => {
+                if (fromTeam === 'A') {
+                    setTeamA(prev => prev.filter(p => p !== id));
+                    setTeamB(prev => [...prev, id]);
+                } else {
+                    setTeamB(prev => prev.filter(p => p !== id));
+                    setTeamA(prev => [...prev, id]);
+                }
+            };
+
+            const initiateMatchRecord = (winnerTeam) => {
+                const winningIds = winnerTeam === 'A' ? teamA : teamB;
+                const losingIds = winnerTeam === 'A' ? teamB : teamA;
+                if (!winningIds.length || !losingIds.length) return alert("隊伍唔可以係吉既！");
+                setConfirmModal({ team: winnerTeam, amount: baseRate, winningIds, losingIds });
+            };
+
+            const confirmAndSaveMatch = async () => {
+                if (!confirmModal || processing) return;
+                setProcessing(true);
+                try {
+                    await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('matches').add({ 
+                        baseRate: confirmModal.amount, 
+                        winners: confirmModal.winningIds, 
+                        losers: confirmModal.losingIds, 
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+                    });
+                    confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: confirmModal.team === 'A' ? ['#3b82f6', '#ffffff'] : ['#ef4444', '#ffffff'] });
+                    setConfirmModal(null);
+                    setProcessing(false);
+                    setMatchMode('select');
+                    alert("✅ 成功入數！");
+                } catch(e) {
+                    alert("記錄失敗");
+                    setProcessing(false);
+                }
+            };
+
+            const manualEntrySave = async () => {
+                if (!winners.length || !losers.length) return alert("要揀人呀！");
+                await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#FFD700', '#FFFFFF'] });
+                setWinners([]); setLosers([]); setView('daily');
+            };
+
             if (loading) return <div className="loading-screen font-black text-amber-500 italic animate-pulse text-lg tracking-widest">排球慈善基金載入中...</div>;
 
             return (
-                <div className="min-h-screen px-6 pt-14 safe-pb relative">
+                <div className="min-h-[100dvh] px-6 pt-14 safe-pb relative">
                     <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,_rgba(184,134,11,0.15)_0%,_rgba(0,0,0,0)_70%)]"></div>
+
+                    {/* MATCHMAKING */}
+                    {view === 'matchmaking' && (
+                        <div className="space-y-6 page-animate h-full flex flex-col">
+                            {matchMode === 'select' ? (
+                                <>
+                                    <div className="flex justify-between items-center">
+                                        <h1 className="text-3xl font-black italic gold-text tracking-tighter">點名處 📝</h1>
+                                        <div className="bg-white/10 px-3 py-1 rounded-full text-xs font-bold">{presentPlayers.length} 人出席</div>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-3 flex-1 content-start overflow-y-auto pb-24 no-scrollbar">
+                                        {sortedUsers.map(u => {
+                                            const s = userStats[u.id];
+                                            return (
+                                                <button key={u.id} onClick={() => togglePresence(u.id)} 
+                                                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center gap-1 transition-all active:scale-90 relative ${presentPlayers.includes(u.id) ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105' : 'bg-white/5 text-slate-500'}`}>
+                                                    {s?.streak >= 2 && (
+                                                        <div className="absolute -top-1 -right-1 bg-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-sm z-10">
+                                                            {s.streakType === 'win' ? '🔥' : '❄️'}
+                                                        </div>
+                                                    )}
+                                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-black/20">{u.photo ? <img src={u.photo} className="avatar-img" /> : <Icon name="user" size={16}/>}</div>
+                                                    <span className="text-[9px] font-black truncate w-full px-1">{u.name}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 shrink-0 mb-4">
+                                        <button onClick={shuffleTeams} className="w-full bg-white/10 py-5 rounded-3xl font-black text-slate-200 text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform uppercase italic">
+                                            <Icon name="shuffle" size={18} /> 隨機分隊
+                                        </button>
+                                        <button onClick={balanceTeams} className="w-full gold-gradient py-5 rounded-3xl font-black text-black text-sm shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform uppercase italic">
+                                            <Icon name="balance" size={18} /> 平衡戰力
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between items-center px-1 shrink-0">
+                                        <button onClick={() => setMatchMode('select')} className="text-xs font-bold text-slate-500 flex items-center gap-1"><Icon name="arrowRight" className="rotate-180" size={14}/> 修改名單</button>
+                                        <div className="flex bg-black/40 rounded-lg p-1 gap-1">
+                                            {[10, 20, 30].map(r => <button key={r} onClick={() => setBaseRate(r)} className={`px-3 py-1 rounded-md text-xs font-black transition-all ${baseRate === r ? 'bg-amber-500 text-black' : 'text-slate-500'}`}>${r}</button>)}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 bento-card blue-gradient relative overflow-hidden flex flex-col p-4 shadow-blue-900/20 shadow-2xl min-h-0">
+                                        <div className="flex justify-between items-center mb-3 relative z-20 shrink-0">
+                                            <h2 className="text-2xl font-black italic">Team A ({teamA.length})</h2>
+                                            <button onClick={() => initiateMatchRecord('A')} className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-xs shadow-lg active:scale-90 uppercase transition-all hover:bg-blue-50">Team A WIN</button>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 overflow-y-auto no-scrollbar content-start flex-1 relative z-10">
+                                            {teamA.map(id => {
+                                                const u = users.find(user => user.id === id);
+                                                return (
+                                                    <div key={id} onClick={() => swapTeam(id, 'A')} className="bg-black/20 p-2 rounded-xl flex flex-col items-center cursor-pointer active:opacity-50">
+                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-black/20 mb-1">{u?.photo && <img src={u.photo} className="avatar-img"/>}</div>
+                                                        <span className="text-[9px] font-bold truncate w-full text-center">{u?.name}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="relative h-10 flex items-center justify-center my-2 shrink-0">
+                                        <div className="absolute inset-0 flex items-center justify-center"><div className="w-full h-[1px] bg-white/10"></div></div>
+                                        <div className="vs-badge text-amber-500 z-10 flex items-center gap-2"><span className="text-white text-xs font-normal opacity-50 block -mb-4 mr-2">每位</span>${baseRate}</div>
+                                        <button onClick={shuffleTeams} className="absolute right-0 bg-white/5 p-2 rounded-full text-slate-500 hover:text-white z-20 active:rotate-180 transition-transform"><Icon name="refresh" size={16}/></button>
+                                    </div>
+                                    <div className="flex-1 bento-card red-gradient relative overflow-hidden flex flex-col p-4 shadow-red-900/20 shadow-2xl min-h-0">
+                                        <div className="flex justify-between items-center mb-3 relative z-20 shrink-0">
+                                            <h2 className="text-2xl font-black italic">Team B ({teamB.length})</h2>
+                                            <button onClick={() => initiateMatchRecord('B')} className="bg-white text-red-600 px-4 py-2 rounded-xl font-black text-xs shadow-lg active:scale-90 uppercase transition-all hover:bg-red-50">Team B WIN</button>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 overflow-y-auto no-scrollbar content-start flex-1 relative z-10">
+                                            {teamB.map(id => {
+                                                const u = users.find(user => user.id === id);
+                                                return (
+                                                    <div key={id} onClick={() => swapTeam(id, 'B')} className="bg-black/20 p-2 rounded-xl flex flex-col items-center cursor-pointer active:opacity-50">
+                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-black/20 mb-1">{u?.photo && <img src={u.photo} className="avatar-img"/>}</div>
+                                                        <span className="text-[9px] font-bold truncate w-full text-center">{u?.name}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-center opacity-40 italic mt-2 shrink-0">點擊頭像可手動換隊</p>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* MANUAL ENTRY */}
+                    {view === 'game' && (
+                        <div className="flex flex-col h-full page-animate pb-32">
+                            <h2 className="text-3xl font-black italic text-amber-400 tracking-tighter text-center shrink-0">手動補飛 💸</h2>
+                            <p className="text-center text-xs opacity-50 -mt-2 mb-4 shrink-0">適合用於記錄過往賽事或特殊調整</p>
+                            <div className="grid grid-cols-3 gap-3 mb-4 shrink-0">
+                                {[10, 20, 30].map(r => <button key={r} onClick={() => setBaseRate(r)} className={`p-4 bento-card font-black text-xl transition-all ${baseRate === r ? 'gold-gradient text-black border-none scale-105 shadow-amber-500/20 shadow-lg' : 'text-slate-600'}`}>${r}</button>)}
+                            </div>
+                            <div className="flex-1 min-h-0 grid grid-cols-2 gap-4 relative">
+                                <div className="flex flex-col h-full bg-white/5 rounded-3xl p-3 border border-white/5 overflow-hidden">
+                                    <p className="text-[10px] font-black text-green-500 uppercase text-center bg-green-500/10 py-3 rounded-2xl italic mb-3 shrink-0">收錢大佬 ({winners.length})</p>
+                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-20">
+                                        {sortedUsers.map(u => (
+                                            <button key={u.id} onClick={() => setWinners(prev => prev.includes(u.id) ? prev.filter(i => i !== u.id) : [...prev, u.id])} 
+                                                disabled={losers.includes(u.id)} 
+                                                className={`w-full p-2 rounded-xl flex items-center gap-2 text-xs font-bold transition-all border ${winners.includes(u.id) ? 'bg-green-500 text-white border-green-400 shadow-lg' : 'text-slate-400 bg-black/20 border-white/5'} ${losers.includes(u.id) ? 'opacity-10 pointer-events-none' : ''}`}>
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${winners.includes(u.id) ? 'bg-white text-green-600' : 'bg-white/10'}`}>
+                                                    {winners.includes(u.id) ? <Icon name="check" size={12}/> : <Icon name="user" size={12}/>}
+                                                </div>
+                                                <span className="truncate">{u.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col h-full bg-white/5 rounded-3xl p-3 border border-white/5 overflow-hidden">
+                                    <p className="text-[10px] font-black text-rose-500 uppercase text-center bg-rose-500/10 py-3 rounded-2xl italic mb-3 shrink-0">慈善大使 ({losers.length})</p>
+                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-20">
+                                        {sortedUsers.map(u => (
+                                            <button key={u.id} onClick={() => setLosers(prev => prev.includes(u.id) ? prev.filter(i => i !== u.id) : [...prev, u.id])} 
+                                                disabled={winners.includes(u.id)} 
+                                                className={`w-full p-2 rounded-xl flex items-center gap-2 text-xs font-bold transition-all border ${losers.includes(u.id) ? 'bg-rose-500 text-white border-rose-400 shadow-lg' : 'text-slate-400 bg-black/20 border-white/5'} ${winners.includes(u.id) ? 'opacity-10 pointer-events-none' : ''}`}>
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${losers.includes(u.id) ? 'bg-white text-rose-600' : 'bg-white/10'}`}>
+                                                    {losers.includes(u.id) ? <Icon name="check" size={12}/> : <Icon name="user" size={12}/>}
+                                                </div>
+                                                <span className="truncate">{u.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="fixed bottom-[120px] left-0 right-0 p-4 z-40 glass-panel flex justify-center pb-8 pt-4">
+                                <button onClick={manualEntrySave} className="w-full max-w-sm gold-gradient py-4 rounded-3xl font-black text-black text-lg active:scale-95 italic uppercase shadow-[0_0_30px_rgba(255,215,0,0.3)] border-2 border-yellow-300">確認入帳 💰</button>
+                            </div>
+                        </div>
+                    )}
 
                     {view === 'dashboard' && (
                         <div className="space-y-6 page-animate">
@@ -238,11 +581,11 @@
                     {view === 'daily' && (
                         <div className="space-y-8 page-animate">
                             <div className="flex justify-between items-center px-2">
-                                <h2 className="text-2xl font-black italic text-amber-400 tracking-tighter">每日大清算 💵</h2>
+                                <h2 className="text-2xl font-black italic text-amber-400 tracking-tighter">每日大清算 🧾</h2>
                                 <button onClick={() => {
-                                    const text = `🏐 *今日捐獻單 (${selectedDate})*\n\n` + dailyData.summary.map(p => `${p.net >= 0 ? '🟢' : '🔴'} *${p.name}*: ${p.net >= 0 ? '收' : '畀'} $${Math.abs(p.net).toFixed(0)}`).join('\n') + `\n\n功德無量！`;
+                                    const text = `🏐 *今日結算 (${selectedDate})*\n` + dailyData.summary.map(p => `${p.net >= 0 ? '🟢' : '🔴'} *${p.name}*: ${p.net >= 0 ? '收' : '畀'} $${Math.abs(p.net).toFixed(0)} ${p.drinks !== 0 ? `(${p.drinks > 0 ? '贏' : '輸'} ${Math.abs(p.drinks)}支)` : ''}`).join('\n') + `\n\n功德無量！`;
                                     const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-                                    alert("已複製 WhatsApp 文字！");
+                                    alert("已複製清算單 (包含飲品數)！");
                                 }} className="bg-green-900/40 text-green-400 p-3 rounded-2xl active:scale-90"><Icon name="whatsapp" size={18} /></button>
                             </div>
                             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1 snap-x">
@@ -253,25 +596,31 @@
                                 }).reverse()}
                             </div>
                             <div className="bento-card p-7 space-y-6 shadow-2xl">
-                                <p className="text-[10px] font-black text-slate-500 uppercase border-b border-white/5 pb-4 text-center">對數清單</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase border-b border-white/5 pb-4 text-center">對數清單 (錢 & 飲品)</p>
                                 {dailyData.summary.map(p => (
                                     <div key={p.id} className="flex justify-between items-center">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/10">{p.photo ? <img src={p.photo} className="avatar-img" /> : <div className="w-full h-full flex items-center justify-center font-black opacity-30">{p.name[0]}</div>}</div>
-                                            <span className="font-black text-slate-100 text-sm w-24 truncate uppercase">{p.name}</span>
+                                            <span className="font-black text-slate-100 text-sm w-20 truncate uppercase">{p.name}</span>
                                         </div>
-                                        <span className={`text-lg font-black font-mono ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>{p.net > 0 ? `收 $${p.net.toFixed(0)}` : `畀 $${Math.abs(p.net).toFixed(0)}`}</span>
+                                        <div className="text-right">
+                                            <p className={`text-lg font-black font-mono leading-none ${p.net >= 0 ? 'text-green-500' : 'text-rose-500'}`}>{p.net > 0 ? `+$${p.net.toFixed(0)}` : `-$${Math.abs(p.net).toFixed(0)}`}</p>
+                                            {p.drinks !== 0 && (
+                                                <p className={`text-[10px] font-bold mt-1 ${p.drinks > 0 ? 'text-blue-400' : 'text-orange-400'}`}>
+                                                    {p.drinks > 0 ? `贏 ${p.drinks} 🥤` : `輸 ${Math.abs(p.drinks)} 🥤`}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                                 {dailyData.summary.length === 0 && <div className="text-center py-6 opacity-30 text-xs">暫無記錄</div>}
                             </div>
-                            
                             <div className="space-y-4">
                                 <p className="text-[10px] font-black text-slate-500 italic px-2">逐場戰績</p>
                                 {dailyData.list.map((m, idx) => (
-                                    <div key={m.id} className="bento-card p-6 border-2 border-white/5">
+                                    <div key={m.id} className="bento-card p-6 border-2 border-white/5 relative">
                                         <div className="flex justify-between items-start mb-4"><span className="text-[10px] font-black text-amber-400 italic uppercase">Game #{dailyData.list.length - idx} • ${m.baseRate}</span>
-                                        {isAdmin && <button onClick={() => confirm('刪除此局？') && db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('matches').doc(m.id).delete()} className="text-rose-500"><Icon name="trash" size={16}/></button>}</div>
+                                        {isAdmin && <button onClick={() => setDeleteModal(m)} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg active:scale-90"><Icon name="trash" size={16}/></button>}</div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div><p className="text-[9px] font-black text-green-500 uppercase">贏家</p><div className="flex flex-wrap gap-1 mt-1">{m.winners?.map(id => <span key={id} className="text-[10px] font-bold text-slate-200 bg-white/10 px-2 rounded-lg">{users.find(u=>u.id===id)?.name || "?"}</span>)}</div></div>
                                             <div className="border-l border-white/5 pl-4"><p className="text-[9px] font-black text-rose-500 uppercase">輸家</p><div className="flex flex-wrap gap-1 mt-1">{m.losers?.map(id => <span key={id} className="text-[10px] font-bold text-slate-200 bg-white/10 px-2 rounded-lg">{users.find(u=>u.id===id)?.name || "?"}</span>)}</div></div>
@@ -282,31 +631,16 @@
                         </div>
                     )}
 
-                    {view === 'game' && (
-                        <div className="space-y-8 page-animate pb-20">
-                            <h2 className="text-3xl font-black italic text-amber-400 tracking-tighter text-center">慈善捐獻錄 💸</h2>
-                            <div className="grid grid-cols-3 gap-3">
-                                {[10, 20, 30].map(r => <button key={r} onClick={() => setBaseRate(r)} className={`p-6 bento-card font-black text-2xl transition-all ${baseRate === r ? 'gold-gradient text-black border-none' : 'text-slate-600'}`}>${r}</button>)}
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 h-[40vh]">
-                                <div className="space-y-2 flex flex-col"><p className="text-[10px] font-black text-green-500 uppercase text-center bg-green-500/10 py-2 rounded-xl italic">收錢大佬 ({winners.length})</p><div className="overflow-y-auto no-scrollbar space-y-2 flex-1">{users.map(u => <button key={u.id} onClick={() => setWinners(prev => prev.includes(u.id) ? prev.filter(i => i !== u.id) : [...prev, u.id])} disabled={losers.includes(u.id)} className={`w-full p-3 bento-card text-xs font-bold ${winners.includes(u.id) ? 'bg-green-500 text-white border-none' : 'text-slate-700'} ${losers.includes(u.id) ? 'hidden' : ''}`}>{u.name}</button>)}</div></div>
-                                <div className="space-y-2 flex flex-col"><p className="text-[10px] font-black text-rose-500 uppercase text-center bg-rose-500/10 py-2 rounded-xl italic">慈善大使 ({losers.length})</p><div className="overflow-y-auto no-scrollbar space-y-2 flex-1">{users.map(u => <button key={u.id} onClick={() => setLosers(prev => prev.includes(u.id) ? prev.filter(i => i !== u.id) : [...prev, u.id])} disabled={winners.includes(u.id)} className={`w-full p-3 bento-card text-xs font-bold ${losers.includes(u.id) ? 'bg-rose-500 text-white border-none' : 'text-slate-700'} ${winners.includes(u.id) ? 'hidden' : ''}`}>{u.name}</button>)}</div></div>
-                            </div>
-                            <button onClick={async () => {
-                                if(!winners.length || !losers.length) return alert("要揀人呀！");
-                                await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('matches').add({ baseRate, winners, losers, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#FFD700', '#FFFFFF'] });
-                                setWinners([]); setLosers([]); setView('daily');
-                            }} className="w-full gold-gradient py-6 rounded-3xl font-black text-black text-xl active:scale-95 italic uppercase shadow-xl">確認入帳！</button>
-                        </div>
-                    )}
-
                     {view === 'monthly' && (
                         <div className="space-y-8 page-animate">
                             <div className="flex justify-between items-center px-2"><h2 className="text-2xl font-black italic text-amber-400 tracking-tighter italic uppercase">月份含冤榜 🏆</h2><input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-black gold-text focus:outline-none" /></div>
                             <div className="space-y-4">{monthlyRank.map((p, i) => (
                                 <div key={p.id} className={`bento-card p-5 flex items-center justify-between border-2 transition-all ${i === 0 ? 'border-amber-500 shadow-xl' : 'border-white/5'}`}>
-                                    <div className="flex items-center gap-4 shrink-0"><div className="relative"><div className="w-14 h-14 rounded-2xl overflow-hidden border-2 bg-slate-900 border-white/5">{p.photo ? <img src={p.photo} className="avatar-img" /> : <div className="w-full h-full flex items-center justify-center opacity-30"><Icon name="user" size={18}/></div>}</div><div className="absolute -top-1 -right-1 gold-gradient text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-black shadow-lg">{i + 1}</div></div><div className="min-w-0"><p className="font-black text-slate-100 text-sm truncate uppercase w-24">{p.name}</p><span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-white/10 text-slate-400 uppercase tracking-widest">{p.net >= 0 ? "收錢" : "慈善"}</span></div></div><div className="text-right"><p className={`text-xl font-black font-mono ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>{p.net.toFixed(0)}</p></div></div>
+                                    <div className="flex items-center gap-4 shrink-0"><div className="relative"><div className="w-14 h-14 rounded-2xl overflow-hidden border-2 bg-slate-900 border-white/5">{p.photo ? <img src={p.photo} className="avatar-img" /> : <div className="w-full h-full flex items-center justify-center opacity-30"><Icon name="user" size={18}/></div>}</div><div className="absolute -top-1 -right-1 gold-gradient text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-black shadow-lg">{i + 1}</div></div><div className="min-w-0"><p className="font-black text-slate-100 text-sm truncate uppercase w-24">{p.name}</p>
+                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${p.net >= 0 ? 'bg-green-500/20 text-green-300' : 'bg-rose-500/20 text-rose-300'}`}>{getFunnyTitle(p.net, i, monthlyRank.length)}</span>
+                                    </div></div><div className="text-right"><p className={`text-xl font-black font-mono ${p.net >= 0 ? 'text-green-400' : 'text-rose-500'}`}>{p.net.toFixed(0)}</p>
+                                    {p.drinks !== 0 && <p className={`text-[9px] font-bold ${p.drinks > 0 ? 'text-blue-400' : 'text-orange-400'}`}>{p.drinks > 0 ? `+${p.drinks}🥤` : `${p.drinks}🥤`}</p>}
+                                    </div></div>
                             ))}</div>
                         </div>
                     )}
@@ -326,27 +660,105 @@
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4 pb-20">
-                                {users.map(u => (
+                                {sortedUsers.map(u => (
                                     <div key={u.id} className="relative group">
-                                        <div onClick={() => { setEditingUser(u); setEditNameValue(u.name); }} className="bento-card p-5 flex flex-col gap-3 active:bg-white/10 transition-all cursor-pointer">
+                                        <div onClick={() => { setStatsModal(userStats[u.id]); }} className="bento-card p-5 flex flex-col gap-3 active:bg-white/10 transition-all cursor-pointer">
                                             <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-white/5 shrink-0">{u.photo ? <img src={u.photo} className="avatar-img" /> : <div className="w-full h-full flex items-center justify-center opacity-10 bg-white/10"><Icon name="user" size={16}/></div>}</div><span className="font-black text-[11px] truncate uppercase tracking-tighter text-slate-300 block w-full">{u.name}</span></div>
                                         </div>
+                                        {isAdmin && <button onClick={() => {setEditingUser(u); setEditNameValue(u.name);}} className="absolute top-2 right-2 bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center z-10 opacity-50"><Icon name="whistle" size={12} /></button>}
                                         {isAdmin && <button onClick={() => confirm(`移除？`) && db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').doc(u.id).delete()} className="absolute -top-2 -right-2 bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-black z-10 active:scale-75"><Icon name="trash" size={12} /></button>}
                                     </div>
                                 ))}
                             </div>
-                            <div className="text-center opacity-10 pb-20"><button onClick={() => { const p = prompt("密碼:"); if(p === ADMIN_PASSWORD) setIsAdmin(true); }} className="text-[10px] font-black uppercase tracking-[0.5em] italic">- Boss Entrance -</button></div>
+                            <div className="text-center opacity-10 pb-20"><button onClick={() => setShowAdminLogin(true)} className="text-[10px] font-black uppercase tracking-[0.5em] italic">- Boss Entrance -</button></div>
                         </div>
                     )}
 
-                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-2 dock-blur rounded-full z-[500] border border-white/10 shadow-2xl px-5">
-                        <button onClick={() => setView('dashboard')} className={`p-4 rounded-full transition-all duration-300 ${view === 'dashboard' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="home" size={20}/></button>
-                        <button onClick={() => setView('daily')} className={`p-4 rounded-full transition-all duration-300 ${view === 'daily' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="coins" size={20}/></button>
-                        <button onClick={() => setView('game')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${view === 'game' ? 'bg-white text-black rotate-45' : 'gold-gradient text-black shadow-amber-500/20'}`}><Icon name="plus" size={26} className={view === 'game' ? '-rotate-45' : ''}/></button>
-                        <button onClick={() => setView('monthly')} className={`p-4 rounded-full transition-all duration-300 ${view === 'monthly' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
-                        <button onClick={() => setView('profiles')} className={`p-4 rounded-full transition-all duration-300 ${view === 'profiles' ? 'gold-gradient text-black shadow-lg scale-110' : 'text-slate-600'}`}><Icon name="user" size={20}/></button>
-                    </nav>
+                    {/* CONFIRMATION MODAL */}
+                    {confirmModal && (
+                        <div className="modal-overlay">
+                            <div className={`modal-content bento-card w-80 p-6 text-center shadow-2xl border-4 ${confirmModal.team === 'A' ? 'border-blue-500' : 'border-red-500'}`}>
+                                <h3 className="text-2xl font-black italic mb-2 uppercase tracking-tighter">
+                                    {confirmModal.team === 'A' ? <span className="text-blue-400">Team A 獲勝!</span> : <span className="text-red-400">Team B 獲勝!</span>}
+                                </h3>
+                                <p className="text-sm text-slate-300 mb-6 font-bold">每位收 <span className="text-amber-400 text-xl">${confirmModal.amount}</span></p>
+                                <div className="space-y-3">
+                                    <button onClick={confirmAndSaveMatch} disabled={processing} className={`w-full py-4 rounded-2xl font-black text-black text-lg uppercase shadow-xl active:scale-95 transition-all ${confirmModal.team === 'A' ? 'bg-blue-500' : 'bg-red-500'}`}>{processing ? '入數中...' : '確認入數 💰'}</button>
+                                    <button onClick={() => setConfirmModal(null)} disabled={processing} className="w-full py-3 rounded-2xl font-black text-slate-400 bg-white/5 active:bg-white/10 uppercase">等陣先</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* STATS MODAL */}
+                    {statsModal && (
+                        <div className="modal-overlay" onClick={() => setStatsModal(null)}>
+                            <div className="modal-content bento-card w-80 p-6 text-center shadow-2xl bg-black/95 relative" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setStatsModal(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><Icon name="close" size={20}/></button>
+                                
+                                <div className="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-amber-500 mb-4 shadow-lg shadow-amber-500/20">
+                                    {statsModal.photo ? <img src={statsModal.photo} className="avatar-img" /> : <div className="w-full h-full bg-white/10 flex items-center justify-center"><Icon name="user" size={40}/></div>}
+                                </div>
+                                <h3 className="text-2xl font-black italic mb-1 uppercase tracking-tighter">{statsModal.name}</h3>
+                                <p className="text-[10px] text-slate-400 mb-6 uppercase tracking-widest">球員數據卡</p>
+                                
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="bg-white/5 p-3 rounded-2xl">
+                                        <p className="text-[10px] text-slate-500 uppercase">勝率</p>
+                                        <p className="text-2xl font-black text-green-400">
+                                            {((statsModal.wins + statsModal.losses) > 0 ? (statsModal.wins / (statsModal.wins + statsModal.losses) * 100).toFixed(0) : 0)}%
+                                        </p>
+                                    </div>
+                                    <div className="bg-white/5 p-3 rounded-2xl">
+                                        <p className="text-[10px] text-slate-500 uppercase">飲品債務</p>
+                                        <p className={`text-xl font-black ${statsModal.netDrinks >= 0 ? 'text-blue-400' : 'text-orange-400'}`}>
+                                            {statsModal.netDrinks > 0 ? `+${statsModal.netDrinks}🥤` : `${statsModal.netDrinks}🥤`}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-3 gap-2 text-xs font-bold text-slate-400">
+                                    <div className="bg-white/5 p-2 rounded-xl">總場數<br/><span className="text-white text-lg">{statsModal.wins + statsModal.losses}</span></div>
+                                    <div className="bg-white/5 p-2 rounded-xl">勝<br/><span className="text-green-400 text-lg">{statsModal.wins}</span></div>
+                                    <div className="bg-white/5 p-2 rounded-xl">負<br/><span className="text-rose-400 text-lg">{statsModal.losses}</span></div>
+                                </div>
+                                
+                                <button onClick={() => { setEditingUser(statsModal); setEditNameValue(statsModal.name); setStatsModal(null); }} className="mt-6 text-xs text-slate-600 underline">修改資料</button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* DELETE MATCH MODAL */}
+                    {deleteModal && (
+                        <div className="modal-overlay">
+                            <div className="modal-content bento-card w-72 p-6 text-center shadow-2xl border border-rose-500/50 bg-black/95">
+                                <Icon name="warn" size={40} className="text-rose-500 mx-auto mb-4" />
+                                <h3 className="text-lg font-black uppercase tracking-widest mb-2 text-rose-500">刪除警告</h3>
+                                <p className="text-xs text-slate-400 mb-6">確定要刪除這筆 ${deleteModal.baseRate} 的紀錄？<br/>此動作無法復原。</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => setDeleteModal(null)} className="py-2 rounded-xl text-slate-400 font-bold bg-white/5">取消</button>
+                                    <button onClick={handleDeleteMatch} className="py-2 rounded-xl text-white font-bold bg-rose-600 shadow-lg shadow-rose-900/50">{processing ? '...' : '刪除'}</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* ADMIN LOGIN MODAL */}
+                    {showAdminLogin && (
+                        <div className="modal-overlay">
+                            <div className="modal-content bento-card w-72 p-6 text-center shadow-2xl border border-white/10 bg-black/95">
+                                <Icon name="lock" size={40} className="text-amber-500 mx-auto mb-4" />
+                                <h3 className="text-lg font-black uppercase tracking-widest mb-4">管理員認證</h3>
+                                <input type="password" value={adminPwdInput} onChange={e => setAdminPwdInput(e.target.value)} className="w-full bg-white/10 border border-white/10 rounded-xl p-3 text-center font-bold mb-4 focus:outline-none focus:border-amber-500 transition-colors" placeholder="請輸入密碼" />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => setShowAdminLogin(false)} className="py-2 rounded-xl text-slate-400 font-bold bg-white/5">取消</button>
+                                    <button onClick={handleAdminLogin} className="py-2 rounded-xl text-black font-bold gold-gradient">進入</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
+                    {/* Edit Modal */}
                     {editingUser && (
                         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-8 bg-black/95 backdrop-blur-3xl page-animate">
                             <div className="bento-card bg-black w-full max-w-xs p-10 border border-white/10 text-center shadow-2xl relative">
@@ -355,7 +767,7 @@
                                     {editingUser.photo ? <img src={editingUser.photo} className="avatar-img group-hover:opacity-40" /> : <Icon name="camera" size={40} className="text-black/40" />}
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100"><Icon name="camera" size={40} className="text-white" /></div>
                                 </div>
-                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async e => { if(e.target.files[0]) { setIsUploading(true); const p = await resize(e.target.files[0]); await handleUpdateUser(null); /* Updated Logic */ await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').doc(editingUser.id).update({ photo: p }); setEditingUser(prev => ({...prev, photo: p})); setIsUploading(false); } }} />
+                                <input type="file" ref={editFileRef} className="hidden" accept="image/*" onChange={async e => { if(e.target.files[0]) { setIsUploading(true); const p = await resize(e.target.files[0]); await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('users').doc(editingUser.id).update({ photo: p }); setEditingUser(prev => ({...prev, photo: p})); setIsUploading(false); } }} />
                                 <div className="space-y-4 mb-8 text-left"><p className="text-[10px] font-black text-amber-500 uppercase italic px-2 tracking-widest leading-none">新名號</p>
                                 <input value={editNameValue} onChange={e => setEditNameValue(e.target.value)} style={{background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'white', borderRadius:'1rem', padding:'1rem', width:'100%', textAlign:'center', fontWeight:'800'}} placeholder="新名字..." /></div>
                                 <div className="flex flex-col gap-3">
@@ -365,6 +777,16 @@
                             </div>
                         </div>
                     )}
+                    
+                    {/* Navigation */}
+                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-2 dock-blur rounded-full z-[900] border border-white/10 shadow-2xl px-5">
+                        <button onClick={() => setView('dashboard')} className={`p-4 rounded-full transition-all duration-300 ${view === 'dashboard' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600'}`}><Icon name="home" size={20}/></button>
+                        <button onClick={() => setView('daily')} className={`p-4 rounded-full transition-all duration-300 ${view === 'daily' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600'}`}><Icon name="coins" size={20}/></button>
+                        <button onClick={() => setView('matchmaking')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${view === 'matchmaking' ? 'bg-white text-black -translate-y-2 scale-110 icon-active' : 'gold-gradient text-black shadow-amber-500/20'}`}><Icon name="whistle" size={26}/></button>
+                        <button onClick={() => setView('monthly')} className={`p-4 rounded-full transition-all duration-300 ${view === 'monthly' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
+                        <button onClick={() => setView('profiles')} className={`p-4 rounded-full transition-all duration-300 ${view === 'profiles' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600'}`}><Icon name="user" size={20}/></button>
+                        <button onClick={() => setView('game')} className={`p-4 rounded-full transition-all duration-300 ${view === 'game' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600 opacity-50'}`}><Icon name="plus" size={16}/></button>
+                    </nav>
                 </div>
             );
         }
@@ -374,4 +796,3 @@
     </script>
 </body>
 </html>
-
