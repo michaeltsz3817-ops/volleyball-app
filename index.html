@@ -4,16 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- PWA / App Icon 設定 -->
+    <!-- PWA 設定 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="排球基金">
     
-    <!-- 這裡是用 SVG 生成的 App Icon (金底排球) -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23F59E0B%22/><text y=%2275%22 x=%2250%22 font-size=%2260%22 text-anchor=%22middle%22>🏐</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23F59E0B%22/><text y=%2275%22 x=%2250%22 font-size=%2260%22 text-anchor=%22middle%22>🏐</text></svg>">
+    <!-- 
+      *** Icon 修復 *** 改用外部高清 PNG 連結，確保 iOS 能正確讀取。
+      圖示：一個立體排球
+    -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3503/3503827.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3503/3503827.png">
 
-    <title>排球慈善基金 V38.0</title>
+    <title>排球慈善基金 V39.0</title>
     
     <!-- 1. 載入核心工具 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -34,10 +37,10 @@
         .gold-gradient { background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%); }
         .blue-gradient { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
         .red-gradient { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); }
-        .dock-blur { background: rgba(10,10,10,0.85); backdrop-filter: blur(40px); border-top: 1px solid rgba(255,255,255,0.1); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
-        .glass-panel { background: rgba(0,0,0,0.7); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.1); }
+        .dock-blur { background: rgba(15,15,15,0.9); backdrop-filter: blur(40px); border-top: 1px solid rgba(255,255,255,0.1); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+        .glass-panel { background: rgba(0,0,0,0.8); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.1); }
         .loading-screen { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .safe-pb { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+        .safe-pb { padding-bottom: calc(130px + env(safe-area-inset-bottom)); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .error-box { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a0505; color: #ff6b6b; padding: 20px; z-index: 10000; display: none; flex-direction: column; justify-content: center; text-align: center; }
         .avatar-img { width: 100%; height: 100%; object-fit: cover; }
@@ -50,8 +53,9 @@
         @keyframes fadeIn { to { opacity: 1; } }
         @keyframes popIn { to { transform: scale(1); opacity: 1; } }
 
-        /* Icon Glow */
-        .icon-active { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)); }
+        /* Icon Styling */
+        .nav-icon { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .icon-active .nav-icon { transform: translateY(-4px) scale(1.1); filter: drop-shadow(0 4px 6px rgba(255, 215, 0, 0.4)); color: #FFD700; }
     </style>
 </head>
 <body>
@@ -94,21 +98,21 @@
         const APP_ID = "vball_v5_pro";
         const ADMIN_PASSWORD = "8888";
 
-        // New Refined Icons
+        // *** NEW DESIGNED ICONS ***
         const Icon = ({ name, size = 24, className = "" }) => {
             const paths = {
-                // Dashboard (Grid)
-                home: <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />,
-                // Daily (Receipt)
-                coins: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />,
-                // Matchmaking (Whistle)
-                whistle: <path d="M12.5 7.5a4.5 4.5 0 0 0-6.364 6.364L12 20l5.864-6.136A4.5 4.5 0 0 0 12.5 7.5z M12 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />,
-                // Rank (Trophy)
-                trophy: <path d="M8 21h8m-4-9v9m0-18C7.5 3 4 5 4 9v2a6 6 0 0 0 4 6h8a6 6 0 0 0 4-6V9c0-4-3.5-6-8-6z" />,
-                // Profiles (Users Group)
-                user: <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
-                // Manual (Edit/Plus)
-                plus: <path d="M12 5v14M5 12h14" />,
+                // Home: Bold House
+                home: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" strokeWidth="2.5" />,
+                // Daily: Receipt / List
+                coins: <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4" strokeWidth="2.5" />,
+                // Matchmaking: Whistle
+                whistle: <path d="M8.5 7.5a4.5 4.5 0 0 0-6.364 6.364L8 20l5.864-6.136A4.5 4.5 0 0 0 8.5 7.5z M8 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" fill="currentColor" stroke="none" />,
+                // Rank: Trophy
+                trophy: <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M6 19h12M8 4h8a4 4 0 0 1 4 4v2a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" strokeWidth="2.5" />,
+                // Users: Person
+                user: <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" strokeWidth="2.5" />,
+                // Plus: Add
+                plus: <path d="M12 5v14M5 12h14" strokeWidth="3" />,
                 
                 // Utils
                 trash: <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />,
@@ -117,13 +121,14 @@
                 shuffle: <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 5M4 4l5 5" />,
                 arrowRight: <path d="M5 12h14M12 5l7 7-7 7" />,
                 refresh: <path d="M23 4v6h-6M1 20v-6h6" />,
-                close: <path d="M18 6L6 18M6 6l12 12" />,
-                check: <path d="M20 6L9 17l-5-5" />,
+                close: <path d="M18 6L6 18M6 6l12 12" strokeWidth="3" />,
+                check: <path d="M20 6L9 17l-5-5" strokeWidth="3" />,
                 lock: <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z" />,
                 warn: <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01" />,
+                chart: <path d="M18 20V10M12 20V4M6 20v-6" />,
                 balance: <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18" />
             };
-            return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>{paths[name] || paths.home}</svg>;
+            return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" className={`${className} nav-icon`}>{paths[name] || paths.home}</svg>;
         };
 
         function App() {
@@ -310,24 +315,15 @@
                 if (!uList.length) return [];
                 const res = {};
                 uList.forEach(u => res[u.id] = { ...u, net: 0, w: 0, l: 0, drinks: 0 });
-                
                 mList.forEach(m => {
                     if (!m.losers || !m.winners) return;
                     const pot = (m.baseRate || 0) * m.losers.length;
                     const share = m.winners.length > 0 ? pot / m.winners.length : 0;
                     m.winners.forEach(id => { 
-                        if (res[id]) { 
-                            res[id].net += share; 
-                            res[id].w++; 
-                            res[id].drinks += 1;
-                        } 
+                        if (res[id]) { res[id].net += share; res[id].w++; res[id].drinks += 1; } 
                     });
                     m.losers.forEach(id => { 
-                        if (res[id]) { 
-                            res[id].net -= m.baseRate; 
-                            res[id].l++; 
-                            res[id].drinks -= 1;
-                        } 
+                        if (res[id]) { res[id].net -= m.baseRate; res[id].l++; res[id].drinks -= 1; } 
                     });
                 });
                 return Object.values(res).filter(p => (p.w + p.l) > 0).sort((a,b) => b.net - a.net);
@@ -779,13 +775,13 @@
                     )}
                     
                     {/* Navigation */}
-                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-2 dock-blur rounded-full z-[900] border border-white/10 shadow-2xl px-5">
-                        <button onClick={() => setView('dashboard')} className={`p-4 rounded-full transition-all duration-300 ${view === 'dashboard' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600'}`}><Icon name="home" size={20}/></button>
-                        <button onClick={() => setView('daily')} className={`p-4 rounded-full transition-all duration-300 ${view === 'daily' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600'}`}><Icon name="coins" size={20}/></button>
-                        <button onClick={() => setView('matchmaking')} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${view === 'matchmaking' ? 'bg-white text-black -translate-y-2 scale-110 icon-active' : 'gold-gradient text-black shadow-amber-500/20'}`}><Icon name="whistle" size={26}/></button>
-                        <button onClick={() => setView('monthly')} className={`p-4 rounded-full transition-all duration-300 ${view === 'monthly' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600'}`}><Icon name="trophy" size={20}/></button>
-                        <button onClick={() => setView('profiles')} className={`p-4 rounded-full transition-all duration-300 ${view === 'profiles' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600'}`}><Icon name="user" size={20}/></button>
-                        <button onClick={() => setView('game')} className={`p-4 rounded-full transition-all duration-300 ${view === 'game' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-600 opacity-50'}`}><Icon name="plus" size={16}/></button>
+                    <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 p-3 dock-blur rounded-2xl z-[900] shadow-2xl border-white/5">
+                        <button onClick={() => setView('dashboard')} className={`p-4 rounded-xl transition-all duration-300 ${view === 'dashboard' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-500 hover:text-white'}`}><Icon name="home" size={24}/></button>
+                        <button onClick={() => setView('daily')} className={`p-4 rounded-xl transition-all duration-300 ${view === 'daily' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-500 hover:text-white'}`}><Icon name="coins" size={24}/></button>
+                        <button onClick={() => setView('matchmaking')} className={`p-4 rounded-xl transition-all duration-300 ${view === 'matchmaking' ? 'bg-white text-black -translate-y-2 scale-110 icon-active shadow-xl' : 'text-slate-500 hover:text-white'}`}><Icon name="whistle" size={28}/></button>
+                        <button onClick={() => setView('monthly')} className={`p-4 rounded-xl transition-all duration-300 ${view === 'monthly' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-500 hover:text-white'}`}><Icon name="trophy" size={24}/></button>
+                        <button onClick={() => setView('profiles')} className={`p-4 rounded-xl transition-all duration-300 ${view === 'profiles' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-500 hover:text-white'}`}><Icon name="user" size={24}/></button>
+                        <button onClick={() => setView('game')} className={`p-4 rounded-xl transition-all duration-300 ${view === 'game' ? 'gold-gradient text-black shadow-lg scale-110 icon-active' : 'text-slate-500 opacity-50 hover:opacity-100'}`}><Icon name="plus" size={20}/></button>
                     </nav>
                 </div>
             );
